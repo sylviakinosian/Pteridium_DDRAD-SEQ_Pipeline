@@ -1,0 +1,14 @@
+#! /bin/bash
+# cd /home/mschilling/Desktop/gbs15/scripts_zg/ind/
+
+for i in *.bam; do
+    #file=$(echo $i | cut -f7 -d/)
+    ids=$(echo $i | cut -f1 -d.)
+    #id=$(echo $id | cut -f7 -d/)
+    #RG=\'@RG'\t'ID:${id}\'
+    echo $ids
+    ~/hts_tools/samtools-1.3.1/samtools sort $i -o ${ids}.sorted.bam
+
+done
+
+
