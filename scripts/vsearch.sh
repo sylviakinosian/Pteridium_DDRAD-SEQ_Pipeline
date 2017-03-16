@@ -1,9 +1,7 @@
 #! /bin/bash
-# 
-
+# written by Martin Schilling 
 # NOTE: this script reads through the current working directory and for every *.fasta file, calls vsearch with the id and a supplied name (centroids/sub_centroids)
 # Usage: ~/gbs_tools/vsearch.sh 0.98(error rate) centroids
-
 
 idval=$1
 #idval100=$(echo $idval | cut -f2 -d.)

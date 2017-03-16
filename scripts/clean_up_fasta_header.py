@@ -1,5 +1,6 @@
 #! /usr/bin/python
 #
+# written by Martin Schilling
 # clean_up_fasta_header.py
 #
 # Usage: ./clean_up_fasta_header.py <input-file_name.fa> <new_file_name.fa>

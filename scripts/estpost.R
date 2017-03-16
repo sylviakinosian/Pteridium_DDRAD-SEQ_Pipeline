@@ -1,3 +1,6 @@
+# cheat sheet for doing this in R with entropy data
+# code by Martin Schilling, organized by Sylvia Kinosian
+
 library("coda")
 
 # load in big qs for each k

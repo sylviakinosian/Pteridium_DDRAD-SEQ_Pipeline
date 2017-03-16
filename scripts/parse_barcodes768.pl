@@ -1,5 +1,6 @@
 #!/usr/bin/perl 
-
+# written by Zach Gompert
+#
 ## This program removes barcode sequences from fastq reads and places them
 ## in the name. This program also removes adpater sequences from the 3' end.
 ## Qual scores corresponding to the removed barcode and adapter are removed 

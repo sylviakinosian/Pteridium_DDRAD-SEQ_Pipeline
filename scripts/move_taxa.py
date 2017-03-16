@@ -1,8 +1,6 @@
 #! /usr/bin/python
-#
-# this script reads through a file of sample ids (or something) and moves the respective files
-#into a different folder (see line 24) the source path will be given as the second command line
-#argument
+# written by Martin Schilling
+# this script reads through a file of sample ids (or something) and moves the respective files into a different folder (see line 24) the source path will be given as the second command line argument
 
 #Usage: ~/gbs_tools/move_taxa.py ids.txt source/path
 

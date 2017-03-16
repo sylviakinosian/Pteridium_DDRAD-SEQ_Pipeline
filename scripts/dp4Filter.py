@@ -1,4 +1,5 @@
 #! /usr/bin/python
+# written by Martin Schilling
 # 
 # This script filters a vcf file for the DP4 values
 #

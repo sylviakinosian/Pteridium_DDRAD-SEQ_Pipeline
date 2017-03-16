@@ -1,5 +1,6 @@
 #! /bin/bash
-# 
+# written by Martin Schilling
+# this script cuts out the barcode from a file
 
 while read line 
 do 

@@ -1,5 +1,5 @@
 #! /usr/bin/python
-#
+# written by Martin Schilling
 # This script reads a fasta file (the last vsearch run with --id 0.8 # to test for whether clusters collapse at a lower id) and removes
 # all entries that have(the 2nd) seqs > 1.
 #

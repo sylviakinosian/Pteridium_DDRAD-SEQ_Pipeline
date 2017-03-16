@@ -1,5 +1,6 @@
 #! /bin/bash
-# cd /home/mschilling/Desktop/gbs15/mstr/
+# written by Martin Schilling
+# this script converts .fastq files to .fasta files
 
 for i in *.fastq; do
     id=$(echo $i | cut -f1 -d.)
