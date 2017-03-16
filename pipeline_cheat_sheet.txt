@@ -13,7 +13,7 @@ parse_barcodes768.pl 2bc_gompstyle.txt infilePteridium.fastq
 splitFastq_ms.pl ids.txt parsed.fastq
 
 ##########
-# 2. move to workstation, 
+# 2. move to workstation (could be done on the CHPC..) 
 # cluster highly similar sequences in indivduals fastq files (id = 98)
 ##########
 
@@ -182,41 +182,32 @@ java -jar ~/hts_tools/picard.jar CreateSequenceDictionary REFERENCE=consensus_si
 
 ### c ###
 # Creating the fasta index file
-# We use the faidx command in samtools to prepare the fasta index file. This file describes byte offsets in the fasta file for each contig, allowing us to compute exactly where a particular reference base at contig:pos is in the fasta file.
 /home/skinosian/hts_tools/samtools-1.3.1/samtools faidx consensus_singletons_ae.fasta
 
 ### d ###
 # get all ya little files ready to go
 ###### what does this actually do??
 # polyploids and diploids
-~/gbs_tools/bwa_mem
+~/gbs_tools/bwa_mem.sh
 
 ### e ###
 # export to .bam
- ~/gbs_tools/sam2bam_bash
+ ~/gbs_tools/sam2bam_bash.sh
 
 ### f ###
 # sort bam files
-~/gbs_tools/samtools_sort
+~/gbs_tools/samtools_sort.sh
 
 ### g ###
 # index bam files
-~/gbs_tools/samtools_indx
+~/gbs_tools/samtools_indx.sh
 
 ### h ###
-# call variants with gatk (THIS DID NOT WORK)
-java -jar /uufs/chpc.utah.edu/sys/pkg/GATK/GenomeAnalysisTK.jar -T UnifiedGenotyper -R /uufs/chpc.utah.edu/common/home/u6009816/pteridium/alignment/consensus_singletons_ae_clean.fasta -I /uufs/chpc.utah.edu/common/home/u6009816/pteridium/alignment/inds/idsPter.list -o pter_aeClusterCons.vcf -nct 12 -glm SNP -hets 0.001 -mbq 20 -ploidy 2 -stand_call_conf 50 -maxAltAlleles 2 -writeFullFormat
-
-# USE THIS STEP
 # call variants with samtools mpileup & bcftools
 # bam.txt list --> .sorted.bam files
 samtools mpileup nthreads=12 -u -E -t DP -C 50 -g -I -q 10 -Q 15 -f consensus_singletons_ae_clean.fasta -b out/pter_bam.txt > pter_variants.bcf
 
 # bcftools
-# old version
-bcftools view -e -g -c -v -N -d 0.3 -p 0.01 -t 0.001 ae_variants.bcf > ae_variants_d30.vcf
-
-# one i actually used
 bcftools call -c -v -V indels -p 0.01 --threads 10 pter_variants.bcf > pter_variants.vcf
 
 ##########
