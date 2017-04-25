@@ -1,0 +1,112 @@
+##########
+# 1. parse barcodes and split .fastq by individual
+# demultiplexing step
+##########
+
+### a ###
+parse_barcodes768.pl barcodes.txt infilePteridium.fastq
+
+### b ###
+splitFastq.pl ids.txt parsed.fastq
+
+##########
+# 2. cluster highly similar sequences in individual .fasta files (id = 98)
+##########
+
+### a ###
+# makes fastqs into fastas
+seqtk.sh
+
+### b ###
+# move taxa into separate folders (if necessary)
+# need to harcode file path in script
+# navigate to folder with .fastqs --> move_taxa.py ids.txt ./
+move_taxa.py ids.txt source/path
+
+### c ###
+# calls vsearch for each .fasta file
+# clusters 98% similar sequences in each .fasta file
+# create a folder called centroids for new files to go in
+vsearch.sh 0.98 centroids
+
+##########
+# 3. combine centroids (results of vsearch.sh, step 2c) from preceeding runs and cluster those with 92% similarity (id = 92)
+##########
+
+### a ###
+cat *.fasta > consensus.fasta
+
+### b ###
+vsearch --cluster_fast consensus.fasta --threads 10 --iddef 2 --id 0.92 --consout cons_92.fasta --msaout msa_92.fasta
+
+##########
+# 4. cluster the resulting consensus sequences at lower id (84) to exclude the ones that collapse (paralogs) 
+# exclude clusters that threshold number of sequence per cluster (30)
+##########
+
+### a ###
+# cluster with id = 0.84
+vsearch --cluster_fast 92cons.fasta --threads 10 --iddef 2 --id 0.84 --consout 84cons.fasta --msaout 84msa.fasta
+
+### b ###
+# remove collapsed clusters
+remove_collapsed_clusters.py 84cons.fasta consensus.fasta
+
+### c ###
+# remove all clusters under a given threshold
+# depends on how many clusters you have...
+# number between 5-30
+remove_clusters_threshold.py 30 consensus.fasta consensus_30.fasta
+
+### d ###
+# check to see how many seqs are pairing for each consensus
+grep "^>" 84cons.fasta | perl -p -i -e 's/\S+(\d+);$/\1/' | sort | uniq -c
+
+#########
+# 5. align parsed reads (from .fastq) to the consensus
+#########
+
+### a ###
+# index consensus sequence
+# gives consensus sequence position points for the alignment later
+bwa index consensus.fasta 
+
+### b ###
+# picard tools to create a dictionary
+java -jar picard.jar CreateSequenceDictionary REFERENCE=consensus.fasta OUTPUT=consensus.dict
+
+### c ###
+# Creating the fasta index file
+# This file describes byte offsets in the fasta file for each contig, allowing us to compute exactly where a particular reference base at contig:pos is in the fasta file.
+samtools faidx consensus.fasta
+
+### d ###
+# align individual .fastq files to the consensus
+# script using bwa mem 
+# results in .sam files
+bwa_mem.sh
+
+### e ###
+# export to .bam
+sam2bam.sh
+
+### f ###
+# sort bam files
+samtools_sort.sh
+
+### g ###
+# index bam files
+samtools_indx.sh
+
+##########
+# 7. call variants
+##########
+
+# call variants with samtools mpileup & bcftools
+
+# mpileup
+# bam.txt list --> .sorted.bam files
+samtools mpileup nthreads=12 -u -E -t DP -C 50 -g -I -q 10 -Q 15 -f consensus.fasta -b bam.txt > variants.bcf
+
+# bcftools
+bcftools call -c -v -V indels -p 0.01 --threads 10 pter_variants.bcf > pter_variants.vcf
