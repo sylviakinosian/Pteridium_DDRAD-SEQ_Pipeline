@@ -3,7 +3,6 @@
 # This script reads a fasta file (after removing the collapsed clusters of id 0.8) and removes all sequences that are under a given threshold number of
 # clusters (n_seq_thr).
 
-#
 # Usage: ./remove_clusters_threshold.py <n_seq_thr> <input-file_name.fasta> <new_file_name.fasta>
 
 
