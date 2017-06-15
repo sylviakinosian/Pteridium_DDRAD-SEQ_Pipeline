@@ -1,13 +1,15 @@
-##########
+#########
 # 1. parse barcodes and split .fastq by individual
 # demultiplexing step
 ##########
 
 ### a ###
 parse_barcodes768.pl barcodes.txt infilePteridium.fastq
+# output: parsed*.fastq miderrors*.fastq
 
 ### b ###
 splitFastq.pl ids.txt parsed.fastq
+# output: *.fastq
 
 ##########
 # 2. cluster highly similar sequences in individual .fasta files (id = 98)
@@ -107,6 +109,17 @@ samtools_indx.sh
 # mpileup
 # bam.txt list --> .sorted.bam files
 samtools mpileup nthreads=12 -u -E -t DP -C 50 -g -I -q 10 -Q 15 -f consensus.fasta -b bam.txt > variants.bcf
+
+# -u uncompressed (for piping)
+# -E recalculate BAQ on the fly, ignore existing BQ tags
+# -t DP (number of high-quality bases)
+# -C 50 coefficient for downgrading mapping quality for reads containing excessive mismatces (50 for BWA)
+# -g output BCF
+# -I --positions FILE list file containing a list of regions or sites where pileup or BCF should be generated (not used here???)
+# -q 10 minimum mapping quality for an alignment to be used
+# -Q 15 minimum base quality for a base to be considered
+# -f the faidx-indexed reference file in fasta format
+# -b list of input BAM files
 
 # bcftools
 bcftools call -c -v -V indels -p 0.01 --threads 10 pter_variants.bcf > pter_variants.vcf
