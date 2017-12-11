@@ -227,7 +227,13 @@ $pm->wait_all_children;
 
 ###Step 3: Call Variants
 
-GATK v. 3.8.0 HaplotypeCaller
+To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its ability to specify ploidy. We called variants separately for the diploids and tetraploids.
+
+```{bash eval=FALSE}
+java -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams
+.txt --genotyping_mode DISCOVERY -ploidy 2 -o ae_rawVar.vcf
+
+```
 
 call variants with samtools mpileup & bcftools
 
