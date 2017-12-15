@@ -124,8 +124,10 @@ $(document).ready(function () {
 </div>
 
 
-<p>This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian</p>
-<p>It is designed to process GBS data from .FASTQ files from ddRADseq data for 4 species of <em>Pteridium</em>: <em>P. aquilinum</em> (diploid), <em>P. esculentum</em> (diploid), <em>P. semihaustatum</em> (tetraploid), and <em>P. caudatum</em> (tetraploid). There is no reference genome for <em>Pteridium</em>, so we create a reference <em>de novo</em> using the diploid species. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged)</p>
+<p>This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated filed can be found at: <a href="https://github.com/sylviakinosian/Pteridium_GBS_Pipeline" class="uri">https://github.com/sylviakinosian/Pteridium_GBS_Pipeline</a></p>
+<p>It is designed to process GBS data from .FASTQ files from ddRADseq data for 4 species of the fern genus <em>Pteridium</em>: <em>P. aquilinum</em> (diploid), <em>P. esculentum</em> (diploid), <em>P. semihaustatum</em> (tetraploid), and <em>P. caudatum</em> (tetraploid). There is no reference genome for <em>Pteridium</em>, so we create a reference <em>de novo</em> using the diploid species. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).</p>
+<p>Further analyses will be done using the program ENTROPY to estimate admixture among the individuals. The goal of this analysis is to determine the parentage of the tetraploid species, which are hypothesized to be allotetraploids.</p>
+<p>There are three main steps to the GBS Pipeline (parsing, building the reference, and calling variants); running ENTROPY also has roughly three steps (seeding values with DAPC, running ENTROPY, visualizing and further analysis in R).</p>
 <div id="parse-barcodes-and-split-.fastq-by-individual" class="section level2">
 <h2>Parse barcodes and split .FASTQ by individual</h2>
 <p>This first step uses perl scripts to parse the barcodes from the raw GBS data and then split that raw file into indiviual .FASTQ files.</p>
@@ -147,7 +149,7 @@ $(document).ready(function () {
 <h2>Building our reference</h2>
 <div id="please-note-this-is-for-the-diploid-species-only-p.-aquilinum-and-p.-esculentum." class="section level3">
 <h3>PLEASE NOTE: this is for the diploid species ONLY (<em>P. aquilinum</em> and <em>P. esculentum</em>).</h3>
-<p>Now that we have extracted the raw information for each individual, it’s time to build our reference genome. There is no reference genome available for <em>Pteridium</em>, so we are going to build one <em>de novo</em> using the two diploid species. We are not using the tetraploid species, because of their ploidy levels and possibly hybrid status.</p>
+<p>Now that we have extracted the raw information for each individual, it’s time to build our reference genome. There is no reference genome available for <em>Pteridium</em>, so we are going to build one <em>de novo</em> using the two diploid species. We are not using the tetraploid species, because of their ploidy levels and hybrid status.</p>
 <p>We decided to build the reference genome by clustering similar sequences within species, and then combining those sequences across individuals. For the final reference, we made sure that each contig was represented in BOTH diploid species.</p>
 <p><strong>Before starting</strong>, transfer the .FASTQ files for the diploid individuals to separate folders. This will make the clustering within each species much easier.</p>
 <p>Below is a command to copy a list of files into different folder. The file_list.txt is a list of the file names (name.fastq) for the individuals you would like to move.</p>
@@ -205,9 +207,9 @@ sta
 </div>
 <div id="step-4-combine-aqui-and-escu-re-run-vsearch-clustering-and-filter" class="section level3">
 <h3>Step 4: combine aqui and escu, re-run vsearch clustering and filter</h3>
-<div id="a.-2" class="section level4">
-<h4>a.</h4>
-<p>BEFORE COMBINING - make sure your <em>aquilinum</em> and <em>esculentum</em> inds are marked separatley within the RCC*.fasta files. This will make checking to see if each final contig is represented by each species much easier.</p>
+<div id="a.-before-combining" class="section level4">
+<h4>a. BEFORE COMBINING</h4>
+<p>Make sure your <em>aquilinum</em> and <em>esculentum</em> inds are marked separatley within the RCC*.fasta files. This will make checking to see if each final contig is represented by each species much easier.</p>
 <pre class="bash"><code>sed 's/^&gt;centroid=centroid=/centroid=centroid=a/g' RCCaqui.fasta &gt; aRCCaqui.fasta
 
 sed 's/^&gt;centroid=centroid=/centroid=centroid=e/g' RCCescu.fasta &gt; eRCCescu.fasta</code></pre>
@@ -257,11 +259,25 @@ finished, retained 105428 contigs</code></pre>
 <pre class="bash"><code>samtools faidx ae_consensus_final.fasta</code></pre>
 </div>
 </div>
-<div id="step-2-align-parsed-reads-from-individual-.fastq-files-to-the-de-novo-reference" class="section level3">
-<h3>Step 2: Align parsed reads (from individual .FASTQ files) to the <em>de novo</em> reference</h3>
+<div id="step-2-align-parsed-reads-from-all-individual-.fastq-files-to-the-de-novo-reference" class="section level3">
+<h3>Step 2: Align parsed reads (from ALL individual .FASTQ files) to the <em>de novo</em> reference</h3>
 <div id="a.-align-individuals-with-bwa-mem" class="section level4">
 <h4>a. Align individuals with BWA MEM</h4>
-<pre class="bash"><code>~/gbs_tools/bwa_mem</code></pre>
+<pre class="bash"><code>#!/bin/bash
+# this script goes through all *.fastq files and aligns to a consensus file; splits out .sam files
+
+# edit the directory (DIR) to your the directory containing all .fastq files
+# edit the &quot;cut -f*&quot; in line 9 to match the section of path the cut
+
+DIR=&quot;/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/2pteridium/inds/&quot;
+
+for i in $DIR*.fastq; do
+    file=$(echo $i | cut -f10 -d/)
+    ids=$(echo $file | cut -f1 -d.)
+    echo $ids
+    /uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa mem -t 10 -w 50 -k 20 -a -C -R &quot;@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA&quot; ae_consensus_final.fasta $i &gt; out/${ids}.sam
+
+done</code></pre>
 <p>output is .SAM files for each individual</p>
 </div>
 <div id="b.-convert-files-from-.sam-to-.bam-sort-and-index-the-individuals-using-samtools" class="section level4">
@@ -271,7 +287,7 @@ finished, retained 105428 contigs</code></pre>
 samtools sort -o *.sorted.bam *.bam
  
 samtools index -b *.sorted.bam</code></pre>
-<p>Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC).</p>
+<p>Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual.</p>
 <pre class="perl"><code>#!/usr/bin/perl
 
 use warnings;
@@ -302,20 +318,21 @@ $pm-&gt;wait_all_children;</code></pre>
 </div>
 <div id="step-3-call-variants" class="section level3">
 <h3>Step 3: Call Variants</h3>
-<p>GATK v. 3.8.0 HaplotypeCaller</p>
-<p>call variants with samtools mpileup &amp; bcftools</p>
-<p>used varCall_sylvia.sh</p>
-<p>how is this different? find a good way to call variants and filter</p>
-<p>MIGHT use GATK haplotype caller…</p>
-<pre class="bash"><code>samtools mpileup nthreads=12 -u -E -t DP -C 50 -g -I -q 10 -Q 15 -f consensus_singletons_ae_clean.fasta -b out/pter_bam.txt &gt; ae_variants.bcf
-
-bcftools call -c -v -V -p 0.01 --threads 10 ae_variants.bcf &gt; ae_variants.vcf</code></pre>
-<p>check read depth across individuals</p>
+<p>To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its ability to specify ploidy. We called variants separately for the diploids and tetraploids.</p>
+<div id="diploids" class="section level4">
+<h4>Diploids</h4>
+<pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000</code></pre>
+</div>
+<div id="tetraploids" class="section level4">
+<h4>Tetraploids</h4>
+<pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I tetraploid_bams.list --genotyping_mode DISCOVERY -ploidy 4 -o 4ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000</code></pre>
 <pre class="bash"><code>grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' &gt; depth.txt</code></pre>
+<p>After calling variants, we used the program VCFTOOLS to filter the resulting .vcf file.</p>
 </div>
-<div id="estimation-of-admixture" class="section level3">
-<h3>Estimation of Admixture</h3>
 </div>
+</div>
+<div id="estimation-of-admixture---still-to-be-done" class="section level2">
+<h2>Estimation of Admixture - still to be done :(</h2>
 <div id="entropy" class="section level3">
 <h3>Entropy</h3>
 <p>Among the diploid species, <em>Pteridium aquilinum</em> and <em>P. esculentum</em>, and the tetraploid species, <em>P. semihaustatum</em> and <em>P. caudatum</em>, there are 15 sub-species. These distinctions are based mostly on morphology, and so testing the population structure among them will help distinguish the validity of these biological species and sub-species.</p>
@@ -323,17 +340,10 @@ bcftools call -c -v -V -p 0.01 --threads 10 ae_variants.bcf &gt; ae_variants.vcf
 <h5>a. seed entropy with values from DAPC</h5>
 <p>Using the R package ADEGENET, run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don’t get label swapping</p>
 <pre class="r"><code>library(adegenet)</code></pre>
-<pre><code>## Loading required package: ade4</code></pre>
-<pre><code>## 
-##    /// adegenet 2.1.0 is loaded ////////////
-## 
-##    &gt; overview: '?adegenet'
-##    &gt; tutorials/doc/questions: 'adegenetWeb()' 
-##    &gt; bug reports/feature requests: adegenetIssues()</code></pre>
 </div>
 <div id="b.-run-entropy" class="section level5">
 <h5>b. run ENTROPY</h5>
-<pre class="bash"><code>./entropy -b 2000 -t 4 -k 2,3,4.. -i ae_in.gl -o out.hdf5 -m 1 -w 0</code></pre>
+<pre class="bash"><code>./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0</code></pre>
 </div>
 <div id="c.-estpost---pulling-out-meaningful-things-from-entropy" class="section level5">
 <h5>c. estpost - pulling out meaningful things from entropy</h5>

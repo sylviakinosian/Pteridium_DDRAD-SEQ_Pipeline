@@ -3,9 +3,13 @@ title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
 ---
-This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian
+This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated filed can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
 
-It is designed to process GBS data from .FASTQ files from ddRADseq data for 4 species of *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged)
+It is designed to process GBS data from .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
+
+Further analyses will be done using the program ENTROPY to estimate admixture among the individuals. The goal of this analysis is to determine the parentage of the tetraploid species, which are hypothesized to be allotetraploids.
+
+There are three main steps to the GBS Pipeline (parsing, building the reference, and calling variants); running ENTROPY also has roughly three steps (seeding values with DAPC, running ENTROPY, visualizing and further analysis in R).
  
 ##Parse barcodes and split .FASTQ by individual
 This first step uses perl scripts to parse the barcodes from the raw GBS data and then split that raw file into indiviual .FASTQ files.
@@ -31,7 +35,7 @@ Now, you should have a .FASTQ file for each individual listed in the indivduals.
 
 ### PLEASE NOTE: this is for the diploid species ONLY (*P. aquilinum* and *P. esculentum*). 
 
-Now that we have extracted the raw information for each individual, it's time to build our reference genome. There is no reference genome available for *Pteridium*, so we are going to build one *de novo* using the two diploid species. We are not using the tetraploid species, because of their ploidy levels and possibly hybrid status.
+Now that we have extracted the raw information for each individual, it's time to build our reference genome. There is no reference genome available for *Pteridium*, so we are going to build one *de novo* using the two diploid species. We are not using the tetraploid species, because of their ploidy levels and hybrid status.
 
 We decided to build the reference genome by clustering similar sequences within species, and then combining those sequences across individuals. For the final reference, we made sure that each contig was represented in BOTH diploid species.
 
@@ -106,9 +110,8 @@ The resulting RCC\*.fasta files will be used in step 5
 
 ###Step 4: combine aqui and escu, re-run vsearch clustering and filter
 
-####a.
-
-BEFORE COMBINING - make sure your *aquilinum* and *esculentum* inds are marked separatley within the RCC\*.fasta files. This will make checking to see if each final contig is represented by each species much easier.
+####a. BEFORE COMBINING
+Make sure your *aquilinum* and *esculentum* inds are marked separatley within the RCC\*.fasta files. This will make checking to see if each final contig is represented by each species much easier.
 
 ```{bash eval=FALSE}
 sed 's/^>centroid=centroid=/centroid=centroid=a/g' RCCaqui.fasta > aRCCaqui.fasta
@@ -174,12 +177,26 @@ We used SAMTOOLS v. 1.5
 samtools faidx ae_consensus_final.fasta
 ```
 
-###Step 2: Align parsed reads (from individual .FASTQ files) to the *de novo* reference
+###Step 2: Align parsed reads (from ALL individual .FASTQ files) to the *de novo* reference
 
 ####a. Align individuals with BWA MEM
 
 ```{bash eval=FALSE}
-~/gbs_tools/bwa_mem
+#!/bin/bash
+# this script goes through all *.fastq files and aligns to a consensus file; splits out .sam files
+
+# edit the directory (DIR) to your the directory containing all .fastq files
+# edit the "cut -f*" in line 9 to match the section of path the cut
+
+DIR="/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/2pteridium/inds/"
+
+for i in $DIR*.fastq; do
+    file=$(echo $i | cut -f10 -d/)
+    ids=$(echo $file | cut -f1 -d.)
+    echo $ids
+    /uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa mem -t 10 -w 50 -k 20 -a -C -R "@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA" ae_consensus_final.fasta $i > out/${ids}.sam
+
+done
 ```
 
 output is .SAM files for each individual
@@ -194,7 +211,7 @@ samtools sort -o *.sorted.bam *.bam
 samtools index -b *.sorted.bam
 ```
 
-Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC).
+Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual.
 
 ```{perl eval=FALSE}
 #!/usr/bin/perl
@@ -229,32 +246,23 @@ $pm->wait_all_children;
 
 To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its ability to specify ploidy. We called variants separately for the diploids and tetraploids.
 
+####Diploids
 ```{bash eval=FALSE}
-java -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams
-.txt --genotyping_mode DISCOVERY -ploidy 2 -o ae_rawVar.vcf
-
+java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000
 ```
 
-call variants with samtools mpileup & bcftools
-
-used varCall_sylvia.sh
-
-how is this different? find a good way to call variants and filter
-
-MIGHT use GATK haplotype caller...
-
+####Tetraploids
 ```{bash eval=FALSE}
-samtools mpileup nthreads=12 -u -E -t DP -C 50 -g -I -q 10 -Q 15 -f consensus_singletons_ae_clean.fasta -b out/pter_bam.txt > ae_variants.bcf
-
-bcftools call -c -v -V -p 0.01 --threads 10 ae_variants.bcf > ae_variants.vcf
+java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I tetraploid_bams.list --genotyping_mode DISCOVERY -ploidy 4 -o 4ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000
 ```
-check read depth across individuals
 
 ```{bash eval=FALSE}
 grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' > depth.txt
 ```
 
-###Estimation of Admixture
+After calling variants, we used the program VCFTOOLS to filter the resulting .vcf file.
+
+##Estimation of Admixture - still to be done :(
 
 ###Entropy
 
@@ -272,7 +280,7 @@ library(adegenet)
 #####b. run ENTROPY
 
 ```{bash eval=FALSE}
-./entropy -b 2000 -t 4 -k 2,3,4.. -i ae_in.gl -o out.hdf5 -m 1 -w 0
+./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0
 ```
 
 #####c. estpost - pulling out meaningful things from entropy
