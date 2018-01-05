@@ -4,6 +4,7 @@
 
 # This script parses through a msaout.fasta file with two individuals and selects ONLY the consensus seqs with both species present
 # joins consensus, removed hard wrap, removes + and - characters
+# NOTE: remember to read through this script and change a & e to the indicators of your choice
 
 # usage: ./presence_filter msaout.fasta
 
@@ -15,15 +16,18 @@ $scnt = 1;
 while(<IN>){
 	chomp;
 	if(m/^>\*cent/){
+		# change a & e to the indicators of your choice
 		$cnt{'e'}=0;
 		$cnt{'a'}=0;
 		m/centroid=([ae])/ or die "this is weird $_\n";
 		$cnt{$1}++;
 	}	
+	# change a & e to the indicators of your choice
 	elsif(m/centroid=([ae])/){
 		$cnt{$1}++;
 	}
 	elsif(m/^>consensus/){
+		# change a & e to the indicators of your choice
 		if($cnt{'a'}==1 and $cnt{'e'}==1){
 			$flag = 1;
 			@seq = ();
