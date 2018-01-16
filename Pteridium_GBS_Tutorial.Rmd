@@ -121,10 +121,10 @@ sed 's/^>centroid=centroid=/centroid=centroid=e/g' RCCescu.fasta > eRCCescu.fast
 ####b. Combine *aquilinum* and *esculentum*
 
 ```{bash eval=FALSE}
-cat aRCCaqui.fasta aRCCescu.fasta > ae_cons.fasta
+cat aRCCaqui.fasta eRCCescu.fasta > ae_cons.fasta
 ```
 
-####b. Re-run vsearch with an id (% similarity) of your choice (92,88,86,84...)
+####c. Re-run vsearch with an id (% similarity) of your choice (92,88,86,84...)
 
 This clustering step in done to ensure that the individual contigs isolated are present in both *aquilinum* and *esculentum*.
 

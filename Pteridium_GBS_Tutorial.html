@@ -216,10 +216,10 @@ sed 's/^&gt;centroid=centroid=/centroid=centroid=e/g' RCCescu.fasta &gt; eRCCesc
 </div>
 <div id="b.-combine-aquilinum-and-esculentum" class="section level4">
 <h4>b. Combine <em>aquilinum</em> and <em>esculentum</em></h4>
-<pre class="bash"><code>cat aRCCaqui.fasta aRCCescu.fasta &gt; ae_cons.fasta</code></pre>
+<pre class="bash"><code>cat aRCCaqui.fasta eRCCescu.fasta &gt; ae_cons.fasta</code></pre>
 </div>
-<div id="b.-re-run-vsearch-with-an-id-similarity-of-your-choice-92888684" class="section level4">
-<h4>b. Re-run vsearch with an id (% similarity) of your choice (92,88,86,84…)</h4>
+<div id="c.-re-run-vsearch-with-an-id-similarity-of-your-choice-92888684" class="section level4">
+<h4>c. Re-run vsearch with an id (% similarity) of your choice (92,88,86,84…)</h4>
 <p>This clustering step in done to ensure that the individual contigs isolated are present in both <em>aquilinum</em> and <em>esculentum</em>.</p>
 <pre class="bash"><code># cluster at 88% similarity
 vsearch --cluster_fast ae_cons.fasta --threads 10 --iddef 2 --id 0.88 --consout 88ae_consout.fasta --msaout 88ae_msaout.fasta
@@ -340,6 +340,13 @@ $pm-&gt;wait_all_children;</code></pre>
 <h5>a. seed entropy with values from DAPC</h5>
 <p>Using the R package ADEGENET, run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don’t get label swapping</p>
 <pre class="r"><code>library(adegenet)</code></pre>
+<pre><code>## Loading required package: ade4</code></pre>
+<pre><code>## 
+##    /// adegenet 2.1.0 is loaded ////////////
+## 
+##    &gt; overview: '?adegenet'
+##    &gt; tutorials/doc/questions: 'adegenetWeb()' 
+##    &gt; bug reports/feature requests: adegenetIssues()</code></pre>
 </div>
 <div id="b.-run-entropy" class="section level5">
 <h5>b. run ENTROPY</h5>
