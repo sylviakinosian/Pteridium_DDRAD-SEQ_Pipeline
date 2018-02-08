@@ -261,24 +261,24 @@ finished, retained 105428 contigs</code></pre>
 </div>
 <div id="step-2-align-parsed-reads-from-all-individual-.fastq-files-to-the-de-novo-reference" class="section level3">
 <h3>Step 2: Align parsed reads (from ALL individual .FASTQ files) to the <em>de novo</em> reference</h3>
-<div id="a.-align-individuals-with-bwa-mem" class="section level4">
-<h4>a. Align individuals with BWA MEM</h4>
-<pre class="bash"><code>#!/bin/bash
-# this script goes through all *.fastq files and aligns to a consensus file; splits out .sam files
+<div id="a.-align-individuals-with-bwa-aln" class="section level4">
+<h4>a. Align individuals with BWA ALN</h4>
+<p>See script <code>bwa_aln.sh</code></p>
+<pre class="bash"><code>#! /bin/bash
 
-# edit the directory (DIR) to your the directory containing all .fastq files
-# edit the &quot;cut -f*&quot; in line 9 to match the section of path the cut
+REF='/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/3pteridium/parse/fastq/ae_consensus_final.fasta'
 
-DIR=&quot;/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/2pteridium/inds/&quot;
+for i in *.fastq;
+do
+ids=$(echo $i | cut -f1 -d.)
+echo $ids
 
-for i in $DIR*.fastq; do
-    file=$(echo $i | cut -f10 -d/)
-    ids=$(echo $file | cut -f1 -d.)
-    echo $ids
-    /uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa mem -t 10 -w 50 -k 20 -a -C -R &quot;@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA&quot; ae_consensus_final.fasta $i &gt; out/${ids}.sam
+/uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa aln -n 4 -l 20 -k 2 -t 8 -q 10 -f $ids.sai $REF $i
+
+/uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa samse -n 1 -r &quot;@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA&quot; -f $ids.sam $REF $ids.sai $i
 
 done</code></pre>
-<p>output is .SAM files for each individual</p>
+<p>The output is .SAM files for each individual</p>
 </div>
 <div id="b.-convert-files-from-.sam-to-.bam-sort-and-index-the-individuals-using-samtools" class="section level4">
 <h4>b. Convert files from .SAM to .BAM, sort, and index the individuals using SAMTOOLS</h4>
@@ -321,13 +321,14 @@ $pm-&gt;wait_all_children;</code></pre>
 <p>To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its ability to specify ploidy. We called variants separately for the diploids and tetraploids.</p>
 <div id="diploids" class="section level4">
 <h4>Diploids</h4>
-<pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000</code></pre>
+<pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.vcf -out_mode EMIT_VARIANTS_ONLY</code></pre>
 </div>
 <div id="tetraploids" class="section level4">
 <h4>Tetraploids</h4>
 <pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I tetraploid_bams.list --genotyping_mode DISCOVERY -ploidy 4 -o 4ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000</code></pre>
 <pre class="bash"><code>grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' &gt; depth.txt</code></pre>
 <p>After calling variants, we used the program VCFTOOLS to filter the resulting .vcf file.</p>
+<pre class="bash"><code>vcftools --remove-filtered-all --remove-indels -maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.4 --minQ 20 --recode-INFO-all --recode --vcf aall_ae_rawVar.vcf</code></pre>
 </div>
 </div>
 </div>
