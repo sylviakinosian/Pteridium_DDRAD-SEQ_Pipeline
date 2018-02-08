@@ -179,27 +179,28 @@ samtools faidx ae_consensus_final.fasta
 
 ###Step 2: Align parsed reads (from ALL individual .FASTQ files) to the *de novo* reference
 
-####a. Align individuals with BWA MEM
+####a. Align individuals with BWA ALN
+
+See script `bwa_aln.sh`
 
 ```{bash eval=FALSE}
-#!/bin/bash
-# this script goes through all *.fastq files and aligns to a consensus file; splits out .sam files
+#! /bin/bash
 
-# edit the directory (DIR) to your the directory containing all .fastq files
-# edit the "cut -f*" in line 9 to match the section of path the cut
+REF='/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/3pteridium/parse/fastq/ae_consensus_final.fasta'
 
-DIR="/uufs/chpc.utah.edu/common/home/wolf-group2/skinosian/2pteridium/inds/"
+for i in *.fastq;
+do
+ids=$(echo $i | cut -f1 -d.)
+echo $ids
 
-for i in $DIR*.fastq; do
-    file=$(echo $i | cut -f10 -d/)
-    ids=$(echo $file | cut -f1 -d.)
-    echo $ids
-    /uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa mem -t 10 -w 50 -k 20 -a -C -R "@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA" ae_consensus_final.fasta $i > out/${ids}.sam
+/uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa aln -n 4 -l 20 -k 2 -t 8 -q 10 -f $ids.sai $REF $i
+
+/uufs/chpc.utah.edu/common/home/u6009816/apps/bwa-0.7.15/bwa samse -n 1 -r "@RG\tID:$ids\tLB:$ids\tSM:$ids\tPL:ILLUMINA" -f $ids.sam $REF $ids.sai $i
 
 done
 ```
 
-output is .SAM files for each individual
+The output is .SAM files for each individual
 
 ####b. Convert files from .SAM to .BAM, sort, and index the individuals using SAMTOOLS
 
@@ -248,7 +249,7 @@ To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its abi
 
 ####Diploids
 ```{bash eval=FALSE}
-java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000
+java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.vcf -out_mode EMIT_VARIANTS_ONLY
 ```
 
 ####Tetraploids
@@ -261,6 +262,10 @@ grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' > depth.txt
 ```
 
 After calling variants, we used the program VCFTOOLS to filter the resulting .vcf file.
+
+```{bash eval=FALSE}
+vcftools --remove-filtered-all --remove-indels -maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.4 --minQ 20 --recode-INFO-all --recode --vcf aall_ae_rawVar.vcf
+```
 
 ##Estimation of Admixture - still to be done :(
 
