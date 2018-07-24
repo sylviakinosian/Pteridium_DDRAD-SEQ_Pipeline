@@ -3,19 +3,21 @@ title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
 ---
-This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated filed can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
+This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline 
 
-It is designed to process GBS data from .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
+The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
 
-Further analyses will be done using the program ENTROPY to estimate admixture among the individuals. The goal of this analysis is to determine the parentage of the tetraploid species, which are hypothesized to be allotetraploids.
+Further analyses are done using the program ENTROPY to estimate admixture among the individuals. The goal of this analysis is to determine the parentage of the tetraploid species, which are hypothesized to be allotetraploids. We are also interested in the admixture within the diploid species, with regards to revising taxonomic rank.
 
 There are three main steps to the GBS Pipeline (parsing, building the reference, and calling variants); running ENTROPY also has roughly three steps (seeding values with DAPC, running ENTROPY, visualizing and further analysis in R).
- 
-##Parse barcodes and split .FASTQ by individual
-This first step uses perl scripts to parse the barcodes from the raw GBS data and then split that raw file into indiviual .FASTQ files.
+
+##GBS Pipeline
+
+##1) Parse barcodes and split .FASTQ by individual
+This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files.
 
 ####a. 
-The first scipt, parse_barcodes768.pl, requires two files: a barcodes file and the raw GBS.FASTQ file. The barcodes.txt file has three columns: the index name, barcode, and sample name for each indiviual. See barcodes.txt for an example. 
+The first scipt, parse\_barcodes768.pl, requires two files: a barcodes file and the raw GBS.FASTQ file. The barcodes.txt file has three columns: the index name, barcode, and sample name for each indiviual. See barcodes.txt for an example. 
 
 Usage:
 ```{bash eval=FALSE}
@@ -23,7 +25,7 @@ parse_barcodes768.pl barcodes.txt Pter_01_S17_L002_R1_001.fastq
 ```
 
 ####b. 
-The next scipt, splitFastq_ms.pl, requires two files: a list of individuals and the parsed.GBS.FASTQ file (one of the output file from parse_barcodes768.pl). The individuals.txt file is simply a list of the names for each individual you would like to create a .FASTQ file for (a text file contain one column, with one name per row, no header).
+The next script, splitFastq\_ms.pl, requires two files: a list of individuals and the parsed.GBS.FASTQ file (one of the output file from parse\_barcodes768.pl). The individuals.txt file is simply a list of the names for each individual you would like to create a .FASTQ file for (a text file contain one column, with one name per row, no header).
 
 Usage:
 ```{bash eval=FALSE}
@@ -31,17 +33,17 @@ splitFastq_ms.pl individuals.txt parsed_Pter_01_S17_L002_R1_001.fastq
 ```
 Now, you should have a .FASTQ file for each individual listed in the indivduals.txt file. 
 
-##Building our reference
+##2) Building our reference
 
 ### PLEASE NOTE: this is for the diploid species ONLY (*P. aquilinum* and *P. esculentum*). 
 
-Now that we have extracted the raw information for each individual, it's time to build our reference genome. There is no reference genome available for *Pteridium*, so we are going to build one *de novo* using the two diploid species. We are not using the tetraploid species, because of their ploidy levels and hybrid status.
+Now that we have extracted the raw information for each individual, it's time to build our reference genome. There is no reference genome available for *Pteridium*, so we are going to build one *de novo* using the two diploid species. Since the tetraploids are most likely allotetraploids (of hybrid origin) we are only using the diploids because that will capture most of the sequence variation and is cleaner than dealing with the possibly divergent sequences on the tetraploid hybrids.
 
 We decided to build the reference genome by clustering similar sequences within species, and then combining those sequences across individuals. For the final reference, we made sure that each contig was represented in BOTH diploid species.
 
 **Before starting**, transfer the .FASTQ files for the diploid individuals to separate folders. This will make the clustering within each species much easier.
 
-Below is a command to copy a list of files into different folder. The file_list.txt is a list of the file names (name.fastq) for the individuals you would like to move.
+Below is a command to copy a list of files into different folder. The file\_list.txt is a list of the file names (name.fastq) for the individuals you would like to move.
 
 ```{bash eval=FALSE}
 xargs cp -t /path/to/folder < file_list.txt
@@ -49,14 +51,29 @@ xargs cp -t /path/to/folder < file_list.txt
 
 ###Step 1: Cluster highly similar sequences in individual .FASTQ files
 
-####a. 
-The first part of this step is to convert the .fastq files into .fasta files using the program SEQTK. See the script seqtk.sh for an example of how to loop through the files in a directory.
+####a.
+The first part of this step is to convert the .FASTQ files into .FASTA files using the program SEQTK. See the script seqtk.sh (below) for an example of how to loop through the files in a directory.
+
+```{bash eval=FALSE}
+for i in *.fastq; do
+    id=$(echo $i | cut -f1 -d.)
+    echo $id
+	seqtk seq -a $i > $id.fasta
+	done
+```
 
 ####b.
 The second part is to use the program VSEARCH to cluster sequences **within each individual** with a 98% similarity to create "centroids". 
 
+usage of vsearch.sh:
+
 ```{bash eval=FALSE}
 vsearch.sh 0.98 centroids
+```
+
+VSEARCH command "under the hood" of vsearch.sh:
+```{bash eval=FALSE}
+vsearch --cluster_fast indivdual.fasta --id 0.98 --iddef 2 --threads 8 --centroids centroids/centroids98_individual.fasta
 ```
 
 ###Step 2: combine centroids from preceeding runs and cluster at 92% similarity
@@ -75,7 +92,7 @@ cat *.fasta escu_consensus.fasta
 vsearch --cluster_fast consensus_escu.fasta --threads 10 --iddef 2 --id 0.92 --consout cons_escu92.fasta --msaout msa_escu92.fasta
 ```
 
-###Step 3: cluster the resulting cluster resulting species consensus at 84% similarity, using the file clustered at 92% similarity as the "reference"; remove paralogs
+###Step 3: Cluster at 84% similarity, using the file clustered at 92% similarity as the "reference". Then remove paralogs
 
 ####a. *P. aquilinum* - cluster at 84% similarity, using the file clustered at 92% similarity as the "reference"
 
@@ -91,7 +108,7 @@ vsearch --cluster_fast 92escuCons.fasta --threads 10 --iddef 2 --id 0.84 --conso
 
 ####c. Remove collapsed clusters (paralogs) from files clustered at 84% similarity
 
-The remove_collapsed_clusters.py script removes all entries that have (the 2nd) seqs > 1.
+The remove\_collapsed\_clusters.py script removes all entries that have (the 2nd) seqs > 1.
 
 ```{bash eval=FALSE}
 ./remove_collapsed_clusters.py 84aquiCons.fasta RCCaqui.fasta
@@ -152,7 +169,7 @@ We chose to use the 84% similarity. The proided us with a large number of contig
 
 Hooray! Now you have a fresh *de novo* reference with which to align your parsed .FASTQ files!
 
-##Alignment of parsed reads and variant calling
+##3) Alignment of parsed reads and variant calling
 
 ###Step 1: Prepare the reference sequence
 
@@ -261,13 +278,104 @@ java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -
 grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' > depth.txt
 ```
 
-After calling variants, we used the program VCFTOOLS to filter the resulting .vcf file.
+###Step 4: filter VCFs
 
-```{bash eval=FALSE}
-vcftools --remove-filtered-all --remove-indels -maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.4 --minQ 20 --recode-INFO-all --recode --vcf aall_ae_rawVar.vcf
+vcftools --remove-filtered-all --remove-indels --maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.3 --minQ 20 --recode-INFO-all --recode --vcf 2ae\_rawVar.vcf
+
+We used a custom python script to filter our VCF files because VCFTOOLS does not support tetraploids. 
+
+The script vcfFilter.py filters based on read depth (minCoverage), alternative alleles(minAltRds), fixed loci (notFixed), and mapping quality (mapQual). These variables can be altered within the file to achieve the desired filtering affect (see **stringency variable** in script below). 
+
+BOTH VCF files need to be filtered this way (2ae\_rawVar.vcf and 4ae\_rawVar.vcf).
+
+```{python eval=FALSE}
+#! /usr/bin/python
+# 
+# This script filters a vcf file based on overall sequence coverage, number of
+# non-reference reads, number of alleles, and reverse orientation reads.  
+# See below for default values, and to change them, if necessary. Additionally,
+# note that currently, the number of retained loci is being written at the end
+# of the file. 
+# Usage: ./vcfFilter.py <variant file>.vcf > outfile.vcf
+
+import sys
+import re
+import shutil
+#import tempfile
+
+# stringency variables, edit as desired
+minCoverage = 20 # minimum number of seqs; DP
+minAltRds = 4 # minimum number of sequences with the alternative allele; AC
+notFixed = 1.0 # removes loci fixed for alt; AF
+mapQual = 30 # minimum mapping quality
+
+
+n_seqs_retained = int()
+with open(sys.argv[1], 'rb') as file:
+    for line in file:
+        if line[0] == '#':
+            print line.split('\n')[0]
+        else:
+            dp = int(re.findall('DP=[0-9]+', line)[0].split('=')[1])
+            ac = int(re.findall('AC=[0-9]+', line)[0].split('=')[1])
+            af = float(re.findall('AF=[0.0-9.0]+', line)[0].split('=')[1]) 
+	    if re.findall('MQ=NaN', line):
+                continue # some of the MQ are NaN, let's just skip those (they would be filtered out anyways)
+            else: 
+                mq = float(re.findall('MQ=[0.0-9.0]+', line)[0].split('=')[1])
+                if (dp >= minCoverage and ac >= minAltRds and af != notFixed and mq >= mapQual):
+                    print line.split('\n')[0]
+                    n_seqs_retained += 1
+                else:
+                    continue
+    file.close()
+
+print '#Retained %i variable loci' % n_seqs_retained
 ```
 
-##Estimation of Admixture - still to be done :(
+###Step 5: Find the intersection of variants in diploids and tetraploids
+
+Since we now have two VCF files, we need to combine them again somehow. To do this, we find the **intersection** of the variants in both files, subset, and then re-combine.
+
+####a. Intersection of variants
+
+```{bash eval=FALSE}
+perl vcf_checker.pl filtered_ae2.vcf filtered_4ae.vcf
+```
+
+Output is a list of the contigs present in both VCF files called matches.txt
+
+####b. Subset VCF files with list of intersection matches
+
+Do this for both files.
+
+```{bash eval=FALSE}
+perl subsetVcf.pl matches.vcf filtered_ae2.vcf
+
+perl subsetVcf.pl matches.vcf filtered_ae4.vcf
+```
+
+Output is two files: sub\_filtered\_ae2.vcf and sub\_filtered\_ae4.vcf
+
+####c. Combine files
+
+What we are doing here is appending the data from one file onto the end of each matching contig in the other file.
+
+```{bash eval=FALSE}
+perl combine.pl sub\_filtered\_ae2.vcf sub\_filtered\_4ae.vcf
+```
+
+**Add CHROM lines from each to aeAll.vcf**
+
+###Step 6: Convert to genotype likelihood format
+
+We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.
+
+```{bash eval=FALSE}
+perl vcf2gl.pl 2ae_out.recode.vcf
+```
+
+##Estimation of Admixture
 
 ###Entropy
 
@@ -275,22 +383,101 @@ Among the diploid species, *Pteridium aquilinum* and *P. esculentum*, and the te
 
 #####a. seed entropy with values from DAPC
 
-Using the R package ADEGENET, run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don't get label swapping
+Using the R package ADEGENET, run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don't get label swapping. We followed the [DAPC vignette](adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf).
 
-```{r}
+```{r eval=FALSE}
 library(adegenet)
 
+# read in genotype matrix
+d <- read.table("pntest_out.recode.vcf", header = F)
+
+# transform data
+dt <- t(d)
+
+# convert to genind object
+dg <- df2genind(dt, sep = " ", ploidy = 2)
+
+grp <- find.clusters(dg, max.n.clust = 15)
+# number of PCs retained: 60
+# number of clusters: 2
+
+head(grp$grp, 97)
+
+# get likelihood assignments
+
+dapc1 <- dapc(dg, grp$grp)
+# PCs 60
+# discriminant dunctions: 1
+
+write.table(dapc1$posterior, "k_est.txt")
 ```
 
 #####b. run ENTROPY
 
 ```{bash eval=FALSE}
-./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0
+./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0 -q pop_ests.txt -s 20
 ```
 
 #####c. estpost - pulling out meaningful things from entropy
 
 ```{bash eval=FALSE}
 /home/skinosian/hts_tools/estpost_h5_entropy -o out_d -p deviance -s 3 -w 1 entropy_ae_k2_2.hdf5
+```
+
+```{r eval=FALSE}
+# function to plot each chain for a given k
+plot_q_per_chain <- function(kqlist, xlabel, kval, ...){
+	cols <- c('#A8FFFD', '#BB61C3', '#a39d9d', 'yellow', '#FF7373', '#FFFAC1', '#7FFF00', '#26CDCD', '#E4D5EF', '#CDBA8F', '#B862D3', '#79D958', '#CA4B87', '#D2C948', '#6386CA', '#D1543B', '#0D0D41')
+	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
+	chain <- seq(1, length(kqlist), 1) 
+	for(i in 1:length(kqlist)){
+		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste("k =", kval, sep = ' '), cex.main= 1)
+		axis(2, at= c(0, 0.5, 1), cex.axis= 1.5, las= 2, pos= -0.2)
+ 	}
+}
+
+# read in files from estpost
+k2_1 <- read.csv("k2_1.txt", sep = ',', header = T)
+k2_2 <- read.csv("k2_2.txt", sep = ',', header = T)
+k2_3 <- read.csv("k2_3.txt", sep = ',', header = T)
+
+k2_all <- as.data.frame(matrix(nrow = 291, ncol = 4))
+k2_all[,1] <- k2_1[,1]
+k2_all[,2] <- k2_2[,1]
+k2_all[,3] <- k2_3[,1]
+
+# average together the three chains
+k2_all[,4] <- rowMeans(k2_all[sapply(k2_all, is.numeric)])
+
+k2_df <- as.data.frame(matrix(nrow = 97, ncol = 3))
+k2_df[,1] <- k2_all[1:97,4]
+k2_df[,2] <- k2_all[98:194,4]
+
+# read in names
+names <- read.csv("names.txt", header = F)
+
+k2_df[,3] <- names[,2]
+
+k2_ordered <- k2_df[order(k2_df$V1),]
+k2_list <- list(k2_ordered[,1:2])
+
+oNames <- k2_ordered[,3]
+
+plot_q_per_chain(k2_list, oNames, 2)
+
+# repeat for other ks
+
+#please <- names[match(correct_names[,1], names[,1]),]
+
+make_data_frame <- function(k_file, n_inds, k_val, ...){
+	df <- as.data.frame(matrix(nrow = n_inds, ncol = k_val + 1))
+	j = 1
+	for (i in 1:k_val){
+		df[,i] <- k_file[j:(n_inds+1),1]
+		j = j + n_inds
+	}
+	return(k_file)
+}
+
 ```
 

@@ -13,7 +13,7 @@ import shutil
 #import tempfile
 
 ### stringency variables, edit as desired
-minCoverage = 128 # minimum number of seqs; DP
+minCoverage = 3 # minimum number of seqs; DP
 minAltRds = 4 # minimum number of sequences with the alternative allele; AC
 notFixed = 1.0 # removes loci fixed for alt; AF
 mapQual = 30 # minimum mapping quality
