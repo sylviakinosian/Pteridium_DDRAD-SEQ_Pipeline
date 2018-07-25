@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 
-# written by Zach Gompert, Sylvia watched 
+# written by Zach Gompert, edited by Sylvia Kinosian 
 
 # This script parses through a msaout.fasta file with two individuals and selects ONLY the consensus seqs with both species present
 # joins consensus, removed hard wrap, removes + and - characters
+
 # NOTE: remember to read through this script and change a & e to the indicators of your choice
 
 # usage: ./presence_filter msaout.fasta

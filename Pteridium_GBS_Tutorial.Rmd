@@ -229,36 +229,7 @@ samtools sort -o *.sorted.bam *.bam
 samtools index -b *.sorted.bam
 ```
 
-Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual.
-
-```{perl eval=FALSE}
-#!/usr/bin/perl
-
-use warnings;
-use strict;
-use Parallel::ForkManager;
-
-my $max = shift(@ARGV); ## get number of cores to use at one time
-
-my $pm = Parallel::ForkManager->new($max);
-
-FILES:
-foreach my $file (@ARGV){ ## loop through set of fastq files
-        $pm->start and next FILES;
-        my $base = $file;
-        $base =~ s/sam// or die "failed to remove sam name\n";
-        $base =~ s!.*/!! or die "failed to remove path\n";
-        # system commands
-		#
-		# these are the important SAMTOOLS commands:
-		system "samtools view -o $base"."bam $file\n";
-        system "samtools sort -o $base"."sorted.bam $base"."bam\n";
-        system "samtools index -b $base"."sorted.bam\n";
-		#
-        $pm->finish; ## exit the child process
-}
-$pm->wait_all_children;
-```
+Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual. See the script fork\_view\_sort\_index.pl for an example.
 
 ###Step 3: Call Variants
 
@@ -371,10 +342,17 @@ perl combine.pl sub\_filtered\_ae2.vcf sub\_filtered\_4ae.vcf
 
 We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.
 
+For diploids:
+
 ```{bash eval=FALSE}
 perl vcf2gl.pl 2ae_out.recode.vcf
 ```
 
+For tetraploids:
+
+```{bash eval=FALSE}
+perl tet_vcf2gl.pl 2ae_out.recode.vcf
+```
 ##Estimation of Admixture
 
 ###Entropy
@@ -431,8 +409,8 @@ plot_q_per_chain <- function(kqlist, xlabel, kval, ...){
 	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
 	chain <- seq(1, length(kqlist), 1) 
 	for(i in 1:length(kqlist)){
-		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste("k =", kval, sep = ' '), cex.main= 1)
-		axis(2, at= c(0, 0.5, 1), cex.axis= 1.5, las= 2, pos= -0.2)
+		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 0.5, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste("k =", kval, sep = ' '), cex.main= 1.5)
+		axis(2, at= c(0, 0.5, 1), cex.axis= 1, las= 2, pos= -0.2)
  	}
 }
 
