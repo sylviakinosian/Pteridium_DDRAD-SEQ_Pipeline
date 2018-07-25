@@ -175,7 +175,7 @@ $(document).ready(function () {
 <p>usage of vsearch.sh:</p>
 <pre class="bash"><code>vsearch.sh 0.98 centroids</code></pre>
 <p>VSEARCH command “under the hood” of vsearch.sh:</p>
-<pre class="bash"><code>vsearch --cluster_fast $i --id 0.98 --iddef 2 --threads 8 --centroids centroids/centroids98_individual.fasta</code></pre>
+<pre class="bash"><code>vsearch --cluster_fast indivdual.fasta --id 0.98 --iddef 2 --threads 8 --centroids centroids/centroids98_individual.fasta</code></pre>
 </div>
 </div>
 <div id="step-2-combine-centroids-from-preceeding-runs-and-cluster-at-92-similarity" class="section level3">
@@ -193,8 +193,8 @@ vsearch --cluster_fast aqui_consensus.fasta --threads 10 --iddef 2 --id 0.92 --c
 vsearch --cluster_fast consensus_escu.fasta --threads 10 --iddef 2 --id 0.92 --consout cons_escu92.fasta --msaout msa_escu92.fasta</code></pre>
 </div>
 </div>
-<div id="step-3-cluster-the-resulting-cluster-resulting-species-consensus-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference-remove-paralogs" class="section level3">
-<h3>Step 3: cluster the resulting cluster resulting species consensus at 84% similarity, using the file clustered at 92% similarity as the “reference”; remove paralogs</h3>
+<div id="step-3-cluster-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference.-then-remove-paralogs" class="section level3">
+<h3>Step 3: Cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”. Then remove paralogs</h3>
 <div id="a.-p.-aquilinum---cluster-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference" class="section level4">
 <h4>a. <em>P. aquilinum</em> - cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”</h4>
 <pre class="bash"><code>vsearch --cluster_fast 92aquiCons.fasta --threads 10 --iddef 2 --id 0.84 --consout 84aquiCons.fasta --msaout 84aquiMsa.fasta</code></pre>
@@ -298,33 +298,7 @@ done</code></pre>
 samtools sort -o *.sorted.bam *.bam
  
 samtools index -b *.sorted.bam</code></pre>
-<p>Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual.</p>
-<pre class="perl"><code>#!/usr/bin/perl
-
-use warnings;
-use strict;
-use Parallel::ForkManager;
-
-my $max = shift(@ARGV); ## get number of cores to use at one time
-
-my $pm = Parallel::ForkManager-&gt;new($max);
-
-FILES:
-foreach my $file (@ARGV){ ## loop through set of fastq files
-        $pm-&gt;start and next FILES;
-        my $base = $file;
-        $base =~ s/sam// or die &quot;failed to remove sam name\n&quot;;
-        $base =~ s!.*/!! or die &quot;failed to remove path\n&quot;;
-        # system commands
-        #
-        # these are the important SAMTOOLS commands:
-        system &quot;samtools view -o $base&quot;.&quot;bam $file\n&quot;;
-        system &quot;samtools sort -o $base&quot;.&quot;sorted.bam $base&quot;.&quot;bam\n&quot;;
-        system &quot;samtools index -b $base&quot;.&quot;sorted.bam\n&quot;;
-        #
-        $pm-&gt;finish; ## exit the child process
-}
-$pm-&gt;wait_all_children;</code></pre>
+<p>Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual. See the script fork_view_sort_index.pl for an example.</p>
 </div>
 </div>
 <div id="step-3-call-variants" class="section level3">
@@ -415,7 +389,10 @@ perl subsetVcf.pl matches.vcf filtered_ae4.vcf</code></pre>
 <div id="step-6-convert-to-genotype-likelihood-format" class="section level3">
 <h3>Step 6: Convert to genotype likelihood format</h3>
 <p>We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.</p>
+<p>For diploids:</p>
 <pre class="bash"><code>perl vcf2gl.pl 2ae_out.recode.vcf</code></pre>
+<p>For tetraploids:</p>
+<pre class="bash"><code>perl tet_vcf2gl.pl 2ae_out.recode.vcf</code></pre>
 </div>
 </div>
 <div id="estimation-of-admixture" class="section level2">
@@ -464,8 +441,8 @@ plot_q_per_chain &lt;- function(kqlist, xlabel, kval, ...){
     par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
     chain &lt;- seq(1, length(kqlist), 1) 
     for(i in 1:length(kqlist)){
-        barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste(&quot;k =&quot;, kval, sep = ' '), cex.main= 1)
-        axis(2, at= c(0, 0.5, 1), cex.axis= 1.5, las= 2, pos= -0.2)
+        barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 0.5, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste(&quot;k =&quot;, kval, sep = ' '), cex.main= 1.5)
+        axis(2, at= c(0, 0.5, 1), cex.axis= 1, las= 2, pos= -0.2)
     }
 }
 
