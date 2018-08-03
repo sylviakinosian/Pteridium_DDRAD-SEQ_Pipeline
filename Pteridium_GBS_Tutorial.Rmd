@@ -3,7 +3,7 @@ title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
 ---
-This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline 
+This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
 
 The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
 
@@ -11,9 +11,11 @@ Further analyses are done using the program ENTROPY to estimate admixture among 
 
 There are three main steps to the GBS Pipeline (parsing, building the reference, and calling variants); running ENTROPY also has roughly three steps (seeding values with DAPC, running ENTROPY, visualizing and further analysis in R).
 
+#{.tabset}
+
 ##GBS Pipeline
 
-##1) Parse barcodes and split .FASTQ by individual
+###**1) Parse barcodes and split .FASTQ by individual**
 This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files. Note that all Perl were run using Perl 5 (http://www.perl.org).
 
 ####a. 
@@ -33,7 +35,7 @@ splitFastq_ms.pl individuals.txt parsed_Pter_01_S17_L002_R1_001.fastq
 ```
 Now, you should have a .FASTQ file for each individual listed in the indivduals.txt file. 
 
-##2) Building our reference
+###**2) Building our reference**
 
 ### PLEASE NOTE: this is for the diploid species ONLY (*P. aquilinum* and *P. esculentum*). 
 
@@ -169,7 +171,7 @@ We chose to use the 84% similarity. The proided us with a large number of contig
 
 Hooray! Now you have a fresh *de novo* reference with which to align your parsed .FASTQ files!
 
-##3) Alignment of parsed reads and variant calling
+###**3) Alignment of parsed reads and variant calling**
 
 ###Step 1: Prepare the reference sequence
 
@@ -340,26 +342,33 @@ What we are doing here is appending the data from one file onto the end of each 
 perl combine.pl sub\_filtered\_ae2.vcf sub\_filtered\_4ae.vcf
 ```
 
+This outputs a file called aeAll.vcf
+
 **Add CHROM lines from each to aeAll.vcf**
 
-###Step 6: Convert to genotype likelihood format
+##Estimation of Admixture
+
+###**Entropy**
+
+Before getting started with Entopry, we need to convert our VCF file to a GL (Genotype Likelihood) file.
 
 We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.
 
 For diploids:
 
 ```{bash eval=FALSE}
-perl vcf2gl.pl 2ae_out.recode.vcf
+perl vcf2gl.pl aeAll.vcf
 ```
+This outputs a file called out.recode.gl
 
-For tetraploids:
+Next we are going to convert the GL file to a matrix that we can use in R with DAPC.
 
 ```{bash eval=FALSE}
-perl tet_vcf2gl.pl 2ae_out.recode.vcf
+perl gl2genest.pl out.recode.gl
 ```
-##Estimation of Admixture
+This outputs a file called pntest\_out.recode.gl
 
-###Entropy
+###Discriminant Analysis of Principle Components 
 
 Among the diploid species, *Pteridium aquilinum* and *P. esculentum*, and the tetraploid species, *P. semihaustatum* and *P. caudatum*, there are 15 sub-species. These distinctions are based mostly on morphology, and so testing the population structure among them will help distinguish the validity of these biological species and sub-species.
 
@@ -405,6 +414,8 @@ write.table(dapc1$posterior, "k_est.txt")
 ```{bash eval=FALSE}
 /home/skinosian/hts_tools/estpost_h5_entropy -o out_d -p deviance -s 3 -w 1 entropy_ae_k2_2.hdf5
 ```
+
+###**Visualizing Admixture**
 
 ```{r eval=FALSE}
 # function to plot each chain for a given k
@@ -463,3 +474,26 @@ make_data_frame <- function(k_file, n_inds, k_val, ...){
 
 ```
 
+##Program Versions
+
+Below is a list of all program versions used in this analysis. Please note that newer versions of these software packages *may* work for this pipeline, but be aware that usage often changes with new verions. 
+
+[Perl 5](https://www.perl.org/)
+
+[Python 2.7.13](https://www.python.org/downloads/release/python-2713/)
+
+[SAMtools v. 1.5](https://sourceforge.net/projects/samtools/files/samtools/1.5/)
+
+[SEQTK 1.2-r102-dirty](https://github.com/lh3/seqtk)
+
+[VSEARCH 2.4.2](https://github.com/torognes/vsearch)
+
+[BWA 0.7.15](https://sourceforge.net/projects/bio-bwa/files/)
+
+[PicardTools 2.9.0](https://github.com/broadinstitute/picard/releases)
+
+[GATK v.3.8.0](https://software.broadinstitute.org/gatk/download/archive) - [HaplotypeCaller](https://software.broadinstitute.org/gatk/documentation/tooldocs/3.8-0/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php)
+
+ENTROPY (coming soon)
+
+ESPOST (coming soon)
