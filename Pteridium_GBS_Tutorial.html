@@ -388,6 +388,7 @@ perl subsetVcf.pl matches.vcf filtered_ae4.vcf</code></pre>
 <pre class="bash"><code>perl combine.pl sub\_filtered\_ae2.vcf sub\_filtered\_4ae.vcf</code></pre>
 <p>This outputs a file called aeAll.vcf</p>
 <p><strong>Add CHROM lines from each to aeAll.vcf</strong></p>
+<p>Our original sample size was 101 plus 15 replicates. Three of the samples were an outgroup, which we decided not to use in the admixture analysis. A fourth sample did not qork in sequencing; its initial FASTQ file was empty. After calling variants, we checked our replicates against their associated indiviual, and determined that all replicates had amplified properly and made it through the pipeline to match their original ID. We then combinded replicates to their associated individual and re-did the variant calling.</p>
 </div>
 </div>
 </div>

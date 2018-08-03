@@ -346,6 +346,9 @@ This outputs a file called aeAll.vcf
 
 **Add CHROM lines from each to aeAll.vcf**
 
+Our original sample size was 101 plus 15 replicates. Three of the samples were an outgroup, which we decided not to use in the admixture analysis. A fourth sample did not qork in sequencing; its initial FASTQ file was empty. After calling variants, we checked our replicates against their associated indiviual, and determined that all replicates had amplified properly and made it through the pipeline to match their original ID. We then combinded replicates to their associated individual and re-did the variant calling.
+
+
 ##Estimation of Admixture
 
 ###**Entropy**
