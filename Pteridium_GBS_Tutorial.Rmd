@@ -14,7 +14,7 @@ There are three main steps to the GBS Pipeline (parsing, building the reference,
 ##GBS Pipeline
 
 ##1) Parse barcodes and split .FASTQ by individual
-This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files.
+This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files. Note that all Perl were run using Perl 5 (http://www.perl.org).
 
 ####a. 
 The first scipt, parse\_barcodes768.pl, requires two files: a barcodes file and the raw GBS.FASTQ file. The barcodes.txt file has three columns: the index name, barcode, and sample name for each indiviual. See barcodes.txt for an example. 
@@ -52,7 +52,7 @@ xargs cp -t /path/to/folder < file_list.txt
 ###Step 1: Cluster highly similar sequences in individual .FASTQ files
 
 ####a.
-The first part of this step is to convert the .FASTQ files into .FASTA files using the program SEQTK. See the script seqtk.sh (below) for an example of how to loop through the files in a directory.
+The first part of this step is to convert the .FASTQ files into .FASTA files using the program SEQTK (v. 1.2-r102-dirty). See the script seqtk.sh (below) for an example of how to loop through the files in a directory.
 
 ```{bash eval=FALSE}
 for i in *.fastq; do
@@ -63,7 +63,7 @@ for i in *.fastq; do
 ```
 
 ####b.
-The second part is to use the program VSEARCH to cluster sequences **within each individual** with a 98% similarity to create "centroids". 
+The second part is to use the program VSEARCH (v. 2.4.2) to cluster sequences **within each individual** with a 98% similarity to create "centroids". 
 
 usage of vsearch.sh:
 
@@ -183,6 +183,8 @@ bwa index ae_consensus_final.fasta
 
 ####b. Picard tools to create a dictionary
 
+We used Java (OpenJDK) v. 1.8.0 and PicardTools v. 2.9.0
+
 ```{bash eval=FALSE}
 java -jar picard.jar CreateSequenceDictionary REFERENCE=ae_consensus_final.fasta OUTPUT=ae_consensus_final.dict
 ```
@@ -251,9 +253,11 @@ grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' > depth.txt
 
 ###Step 4: filter VCFs
 
-vcftools --remove-filtered-all --remove-indels --maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.3 --minQ 20 --recode-INFO-all --recode --vcf 2ae\_rawVar.vcf
+VCFTOOLS (v. 0.1.15) can be used to filter diploids (see below), but because it does not support tetraploids we created a custom Python script to filter instead.
 
-We used a custom python script to filter our VCF files because VCFTOOLS does not support tetraploids. 
+```{bash eval=FALSE}
+vcftools --remove-filtered-all --remove-indels --maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.3 --minQ 20 --recode-INFO-all --recode --vcf 2ae\_rawVar.vcf
+```
 
 The script vcfFilter.py filters based on read depth (minCoverage), alternative alleles(minAltRds), fixed loci (notFixed), and mapping quality (mapQual). These variables can be altered within the file to achieve the desired filtering affect (see **stringency variable** in script below). 
 
@@ -361,7 +365,7 @@ Among the diploid species, *Pteridium aquilinum* and *P. esculentum*, and the te
 
 #####a. seed entropy with values from DAPC
 
-Using the R package ADEGENET, run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don't get label swapping. We followed the [DAPC vignette](adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf).
+Using the R package ADEGENET (v. 2.1.1), run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don't get label swapping. We followed the [DAPC vignette](adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf).
 
 ```{r eval=FALSE}
 library(adegenet)
@@ -396,7 +400,7 @@ write.table(dapc1$posterior, "k_est.txt")
 ./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0 -q pop_ests.txt -s 20
 ```
 
-#####c. estpost - pulling out meaningful things from entropy
+#####c. ESTPOST - pulling out meaningful things from entropy
 
 ```{bash eval=FALSE}
 /home/skinosian/hts_tools/estpost_h5_entropy -o out_d -p deviance -s 3 -w 1 entropy_ae_k2_2.hdf5
