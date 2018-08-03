@@ -1,0 +1,19 @@
+ENTROPY
+
+First, extract the file. 
+
+Compile with your normal C compiler:
+
+./configure
+make
+
+See entropy/README.md for further installation instructions.
+
+
+ESTPOST
+
+Compile with the h5cc compiler:
+
+h5cc -Wall -O3 -o estpost_entropy estpost_h5_entropy.c -lm -lgsl -lgslcblas
+
+Ignore unused viable warnings.

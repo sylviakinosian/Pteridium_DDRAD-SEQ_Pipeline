@@ -494,6 +494,6 @@ Below is a list of all program versions used in this analysis. Please note that 
 
 [GATK v.3.8.0](https://software.broadinstitute.org/gatk/download/archive) - [HaplotypeCaller](https://software.broadinstitute.org/gatk/documentation/tooldocs/3.8-0/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php)
 
-ENTROPY (coming soon)
+[ENTROPY & ESTPOST](https://github.com/sylviakinosian/Pteridium_GBS_Pipeline/tree/master/entropy)
 
-ESPOST (coming soon)
+
