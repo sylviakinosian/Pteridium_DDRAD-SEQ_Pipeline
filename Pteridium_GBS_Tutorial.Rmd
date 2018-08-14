@@ -448,11 +448,11 @@ k2_df[,3] <- names[,2]
 #please <- names[match(correct_names[,1], names[,1]),]
 
 # this function averages chains for a given k
-avg_k <- function(kval, n_inds = 97, k_file_1, k_file_2, k_file_3, ...){
-	num <- (nargs() - 2)
-	df <- as.data.frame(matrix(nrow = (num + 1),  ncol = n_inds))
-	for (i in 1:num){
-		df[,i] <- k_file_i[,1]
+avg_k <- function(kval, n_inds = 97, ...){
+	filenames <- unlist(list(...))
+	df <- as.data.frame(matrix(nrow = length(filenames),  ncol = n_inds))
+	for (i in seq_along(filenames)){
+		df[,i] <- k_file[i]
 	}
 	df[,(num+1)] <- rowMeans(df[sapply(df, is.numeric)])
 	return(df)
