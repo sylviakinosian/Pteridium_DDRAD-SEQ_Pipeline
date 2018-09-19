@@ -1,4 +1,4 @@
----
+
 title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
@@ -458,12 +458,12 @@ df2 <- make_df(kfile = avg2, k_val = 2, names = names)
 k2list <- list(k2_ordered[,1:2])
 
 # function to plot each chain for a given k
-plot_q_per_chain <- function(kqlist, xlabel, kval, ...){
-	cols <- c('#A8FFFD', '#FFA8AA', '#BB61C3', '#69C261','#A39D9D', '#FFFF00', '#C1C6FF','#26CDCD', '#E4D5EF', '#CDBA8F', '#B862D3', '#79D958', '#CA4B87', '#D2C948', '#6386CA', '#D1543B', '#0D0D41')
+plot_q_per_chain <- function(kqlist, xlabel, ...){
+	cols <- c('#A8FFFD', '#FFA8AA', '#BB61C3', '#69C261','#A39D9D', '#FFFF00', '#C1C6FF','#26CDCD', '#E4D5EF', '#CDBA8F', '#B862D3', '#79D958', '#CA4B87', '#D2C948', '#6386CA', '#D1543B', '#0D0D41')	
 	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
 	chain <- seq(1, length(kqlist), 1) 
 	for(i in 1:length(kqlist)){
-		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 0.5, border= 1, space= c(0.05), yaxt= 'n', cex.lab= 2, names.arg= xlabel, main = paste("k =", kval, sep = ' '), cex.main= 1.5)
+		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1.2, border= 1, space= c(0.05,0.05), yaxt= 'n', ylab= paste("k =", chain[i+1], sep= ' '), cex.lab= 2, names.arg= xlabel)
 		axis(2, at= c(0, 0.5, 1), cex.axis= 1, las= 2, pos= -0.2)
  	}
 }
