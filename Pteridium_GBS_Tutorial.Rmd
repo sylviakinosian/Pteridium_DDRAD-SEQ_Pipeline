@@ -1,9 +1,9 @@
-
+---
 title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
 ---
-This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
+This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline 
 
 The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
 
@@ -82,7 +82,7 @@ vsearch --cluster_fast indivdual.fasta --id 0.98 --iddef 2 --threads 8 --centroi
 
 ####a. *P. aquilinum*
 ```{bash eval=FALSE}
-cat *.fasta aqui_consensus.fasta
+cat *.fasta > aqui_consensus.fasta
 
 vsearch --cluster_fast aqui_consensus.fasta --threads 10 --iddef 2 --id 0.92 --consout 92aquiCons.fasta --msaout 92aquiMsa.fasta
 ```
@@ -133,10 +133,11 @@ The resulting RCC\*.fasta files will be used in step 5
 Make sure your *aquilinum* and *esculentum* inds are marked separatley within the RCC\*.fasta files. This will make checking to see if each final contig is represented by each species much easier.
 
 ```{bash eval=FALSE}
-sed 's/^>centroid=centroid=/centroid=centroid=a/g' RCCaqui.fasta > aRCCaqui.fasta
+sed 's/^>centroid=centroid=/>centroid=centroid=a/g' RCCaqui.fasta > aRCCaqui.fasta
 
-sed 's/^>centroid=centroid=/centroid=centroid=e/g' RCCescu.fasta > eRCCescu.fasta
+sed 's/^>centroid=centroid=/>centroid=centroid=e/g' RCCescu.fasta > eRCCescu.fasta
 ```
+
 ####b. Combine *aquilinum* and *esculentum*
 
 ```{bash eval=FALSE}
@@ -265,51 +266,6 @@ The script vcfFilter.py filters based on read depth (minCoverage), alternative a
 
 BOTH VCF files need to be filtered this way (2ae\_rawVar.vcf and 4ae\_rawVar.vcf).
 
-```{python eval=FALSE}
-#! /usr/bin/python
-# 
-# This script filters a vcf file based on overall sequence coverage, number of
-# non-reference reads, number of alleles, and reverse orientation reads.  
-# See below for default values, and to change them, if necessary. Additionally,
-# note that currently, the number of retained loci is being written at the end
-# of the file. 
-# Usage: ./vcfFilter.py <variant file>.vcf > outfile.vcf
-
-import sys
-import re
-import shutil
-#import tempfile
-
-# stringency variables, edit as desired
-minCoverage = 20 # minimum number of seqs; DP
-minAltRds = 4 # minimum number of sequences with the alternative allele; AC
-notFixed = 1.0 # removes loci fixed for alt; AF
-mapQual = 30 # minimum mapping quality
-
-
-n_seqs_retained = int()
-with open(sys.argv[1], 'rb') as file:
-    for line in file:
-        if line[0] == '#':
-            print line.split('\n')[0]
-        else:
-            dp = int(re.findall('DP=[0-9]+', line)[0].split('=')[1])
-            ac = int(re.findall('AC=[0-9]+', line)[0].split('=')[1])
-            af = float(re.findall('AF=[0.0-9.0]+', line)[0].split('=')[1]) 
-	    if re.findall('MQ=NaN', line):
-                continue # some of the MQ are NaN, let's just skip those (they would be filtered out anyways)
-            else: 
-                mq = float(re.findall('MQ=[0.0-9.0]+', line)[0].split('=')[1])
-                if (dp >= minCoverage and ac >= minAltRds and af != notFixed and mq >= mapQual):
-                    print line.split('\n')[0]
-                    n_seqs_retained += 1
-                else:
-                    continue
-    file.close()
-
-print '#Retained %i variable loci' % n_seqs_retained
-```
-
 ###Step 5: Find the intersection of variants in diploids and tetraploids
 
 Since we now have two VCF files, we need to combine them again somehow. To do this, we find the **intersection** of the variants in both files, subset, and then re-combine.
@@ -353,7 +309,7 @@ Our original sample size was 101 plus 15 replicates. Three of the samples were a
 
 ###**Entropy**
 
-Before getting started with Entopry, we need to convert our VCF file to a GL (Genotype Likelihood) file.
+Before getting started with Entropy, we need to convert our VCF file to a GL (Genotype Likelihood) file.
 
 We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.
 
@@ -459,7 +415,7 @@ k2list <- list(k2_ordered[,1:2])
 
 # function to plot each chain for a given k
 plot_q_per_chain <- function(kqlist, xlabel, ...){
-	cols <- c('#A8FFFD', '#FFA8AA', '#BB61C3', '#69C261','#A39D9D', '#FFFF00', '#C1C6FF','#26CDCD', '#E4D5EF', '#CDBA8F', '#B862D3', '#79D958', '#CA4B87', '#D2C948', '#6386CA', '#D1543B', '#0D0D41')	
+	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
 	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
 	chain <- seq(1, length(kqlist), 1) 
 	for(i in 1:length(kqlist)){
