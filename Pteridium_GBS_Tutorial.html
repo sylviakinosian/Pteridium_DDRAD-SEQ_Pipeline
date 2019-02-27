@@ -282,6 +282,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -289,14 +292,74 @@ button.code-folding-btn:focus {
 <div class="container-fluid main-container">
 
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -462,7 +525,7 @@ perl subsetVcf.pl matches.vcf filtered_ae4.vcf</code></pre>
 <p>Our original sample size was 101 plus 15 replicates. Three of the samples were an outgroup, which we decided not to use in the admixture analysis. A fourth sample did not qork in sequencing; its initial FASTQ file was empty. After calling variants, we checked our replicates against their associated indiviual, and determined that all replicates had amplified properly and made it through the pipeline to match their original ID. We then combinded replicates to their associated individual and re-did the variant calling.</p>
 <p>##Estimation of Admixture</p>
 <p>###<strong>Entropy</strong></p>
-<p>Before getting started with Entopry, we need to convert our VCF file to a GL (Genotype Likelihood) file.</p>
+<p>Before getting started with Entropy, we need to convert our VCF file to a GL (Genotype Likelihood) file.</p>
 <p>We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.</p>
 <p>For diploids:</p>
 <pre class="bash"><code>perl vcf2gl.pl aeAll.vcf</code></pre>
@@ -541,7 +604,7 @@ k2list &lt;- list(k2_ordered[,1:2])
 
 # function to plot each chain for a given k
 plot_q_per_chain &lt;- function(kqlist, xlabel, ...){
-    cols &lt;- c('#A8FFFD', '#FFA8AA', '#BB61C3', '#69C261','#A39D9D', '#FFFF00', '#C1C6FF','#26CDCD', '#E4D5EF', '#CDBA8F', '#B862D3', '#79D958', '#CA4B87', '#D2C948', '#6386CA', '#D1543B', '#0D0D41')  
+    cols &lt;- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF')     
     par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
     chain &lt;- seq(1, length(kqlist), 1) 
     for(i in 1:length(kqlist)){

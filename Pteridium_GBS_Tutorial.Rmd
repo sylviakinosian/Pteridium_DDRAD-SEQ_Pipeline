@@ -3,6 +3,7 @@ title: "*Pteridium* GBS Pipeline"
 author: "Sylvia Kinosian"
 output: html_document
 ---
+
 This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline 
 
 The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
