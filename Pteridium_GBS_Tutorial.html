@@ -375,55 +375,89 @@ $(document).ready(function () {
 </div>
 
 
-<p>This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: <a href="https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline" class="uri">https://github.com/sylviakinosian/Pteridium\_GBS\_Pipeline</a></p>
+<p>This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: <a href="https://github.com/sylviakinosian/Pteridium_GBS_Pipeline" class="uri">https://github.com/sylviakinosian/Pteridium_GBS_Pipeline</a></p>
 <p>The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus <em>Pteridium</em>: <em>P. aquilinum</em> (diploid), <em>P. esculentum</em> (diploid), <em>P. semihaustatum</em> (tetraploid), and <em>P. caudatum</em> (tetraploid). There is no reference genome for <em>Pteridium</em>, so we create a reference <em>de novo</em> using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).</p>
 <p>Further analyses are done using the program ENTROPY to estimate admixture among the individuals. The goal of this analysis is to determine the parentage of the tetraploid species, which are hypothesized to be allotetraploids. We are also interested in the admixture within the diploid species, with regards to revising taxonomic rank.</p>
 <p>There are three main steps to the GBS Pipeline (parsing, building the reference, and calling variants); running ENTROPY also has roughly three steps (seeding values with DAPC, running ENTROPY, visualizing and further analysis in R).</p>
-<p>#{.tabset}</p>
-<p>##GBS Pipeline</p>
-<p>###<strong>1) Parse barcodes and split .FASTQ by individual</strong> This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files. Note that all Perl were run using Perl 5 (<a href="http://www.perl.org" class="uri">http://www.perl.org</a>).</p>
-<p>####a. The first scipt, parse_barcodes768.pl, requires two files: a barcodes file and the raw GBS.FASTQ file. The barcodes.txt file has three columns: the index name, barcode, and sample name for each indiviual. See barcodes.txt for an example.</p>
+<div id="section" class="section level1 tabset tabset-fade">
+<h1></h1>
+<div id="gbs-pipeline" class="section level2">
+<h2>GBS Pipeline</h2>
+<div id="parse-barcodes-and-split-.fastq-by-individual" class="section level3">
+<h3><strong>1) Parse barcodes and split .FASTQ by individual</strong></h3>
+<p>This first step uses perl scripts to parse the barcodes from the raw GBS .FASTQ data and then split that raw file into indiviual .FASTQ files. Note that all Perl were run using Perl 5 (<a href="http://www.perl.org" class="uri">http://www.perl.org</a>).</p>
+</div>
+<div id="a." class="section level3">
+<h3>a.</h3>
+<p>The first scipt, parse_barcodes768.pl, requires two files: a barcodes file and the raw GBS.FASTQ file. The barcodes.txt file has three columns: the index name, barcode, and sample name for each indiviual. See barcodes.txt for an example.</p>
 <p>Usage:</p>
 <pre class="bash"><code>parse_barcodes768.pl barcodes.txt Pter_01_S17_L002_R1_001.fastq</code></pre>
-<p>####b. The next script, splitFastq_ms.pl, requires two files: a list of individuals and the parsed.GBS.FASTQ file (one of the output file from parse_barcodes768.pl). The individuals.txt file is simply a list of the names for each individual you would like to create a .FASTQ file for (a text file contain one column, with one name per row, no header).</p>
+</div>
+<div id="b." class="section level3">
+<h3>b.</h3>
+<p>The next script, splitFastq_ms.pl, requires two files: a list of individuals and the parsed.GBS.FASTQ file (one of the output file from parse_barcodes768.pl). The individuals.txt file is simply a list of the names for each individual you would like to create a .FASTQ file for (a text file contain one column, with one name per row, no header).</p>
 <p>Usage:</p>
 <pre class="bash"><code>splitFastq_ms.pl individuals.txt parsed_Pter_01_S17_L002_R1_001.fastq</code></pre>
 <p>Now, you should have a .FASTQ file for each individual listed in the indivduals.txt file.</p>
-<p>###<strong>2) Building our reference</strong></p>
-<div id="please-note-this-is-for-the-diploid-species-only-p.-aquilinum-and-p.-esculentum." class="section level3">
-<h3>PLEASE NOTE: this is for the diploid species ONLY (<em>P. aquilinum</em> and <em>P. esculentum</em>).</h3>
+</div>
+<div id="building-our-reference" class="section level3">
+<h3><strong>2) Building our reference</strong></h3>
+<div id="please-note-this-is-for-the-diploid-species-only-p.-aquilinum-and-p.-esculentum." class="section level4">
+<h4>PLEASE NOTE: this is for the diploid species ONLY (<em>P. aquilinum</em> and <em>P. esculentum</em>).</h4>
 <p>Now that we have extracted the raw information for each individual, it’s time to build our reference genome. There is no reference genome available for <em>Pteridium</em>, so we are going to build one <em>de novo</em> using the two diploid species. Since the tetraploids are most likely allotetraploids (of hybrid origin) we are only using the diploids because that will capture most of the sequence variation and is cleaner than dealing with the possibly divergent sequences on the tetraploid hybrids.</p>
 <p>We decided to build the reference genome by clustering similar sequences within species, and then combining those sequences across individuals. For the final reference, we made sure that each contig was represented in BOTH diploid species.</p>
 <p><strong>Before starting</strong>, transfer the .FASTQ files for the diploid individuals to separate folders. This will make the clustering within each species much easier.</p>
 <p>Below is a command to copy a list of files into different folder. The file_list.txt is a list of the file names (name.fastq) for the individuals you would like to move.</p>
 <pre class="bash"><code>xargs cp -t /path/to/folder &lt; file_list.txt</code></pre>
-<p>###Step 1: Cluster highly similar sequences in individual .FASTQ files</p>
-<p>####a. The first part of this step is to convert the .FASTQ files into .FASTA files using the program SEQTK (v. 1.2-r102-dirty). See the script seqtk.sh (below) for an example of how to loop through the files in a directory.</p>
+</div>
+</div>
+<div id="step-1-cluster-highly-similar-sequences-in-individual-.fastq-files" class="section level3">
+<h3>Step 1: Cluster highly similar sequences in individual .FASTQ files</h3>
+<div id="a.-1" class="section level4">
+<h4>a.</h4>
+<p>The first part of this step is to convert the .FASTQ files into .FASTA files using the program SEQTK (v. 1.2-r102-dirty). See the script seqtk.sh (below) for an example of how to loop through the files in a directory.</p>
 <pre class="bash"><code>for i in *.fastq; do
     id=$(echo $i | cut -f1 -d.)
     echo $id
     seqtk seq -a $i &gt; $id.fasta
     done</code></pre>
-<p>####b. The second part is to use the program VSEARCH (v. 2.4.2) to cluster sequences <strong>within each individual</strong> with a 98% similarity to create “centroids”.</p>
+</div>
+<div id="b.-1" class="section level4">
+<h4>b.</h4>
+<p>The second part is to use the program VSEARCH (v. 2.4.2) to cluster sequences <strong>within each individual</strong> with a 98% similarity to create “centroids”.</p>
 <p>usage of vsearch.sh:</p>
 <pre class="bash"><code>vsearch.sh 0.98 centroids</code></pre>
 <p>VSEARCH command “under the hood” of vsearch.sh:</p>
 <pre class="bash"><code>vsearch --cluster_fast indivdual.fasta --id 0.98 --iddef 2 --threads 8 --centroids centroids/centroids98_individual.fasta</code></pre>
-<p>###Step 2: combine centroids from preceeding runs and cluster at 92% similarity</p>
-<p>####a. <em>P. aquilinum</em></p>
+</div>
+</div>
+<div id="step-2-combine-centroids-from-preceeding-runs-and-cluster-at-92-similarity" class="section level3">
+<h3>Step 2: combine centroids from preceeding runs and cluster at 92% similarity</h3>
+<div id="a.-p.-aquilinum" class="section level4">
+<h4>a. <em>P. aquilinum</em></h4>
 <pre class="bash"><code>cat *.fasta &gt; aqui_consensus.fasta
 
 vsearch --cluster_fast aqui_consensus.fasta --threads 10 --iddef 2 --id 0.92 --consout 92aquiCons.fasta --msaout 92aquiMsa.fasta</code></pre>
-<p>####b. <em>P. esculentum</em></p>
+</div>
+<div id="b.-p.-esculentum" class="section level4">
+<h4>b. <em>P. esculentum</em></h4>
 <pre class="bash"><code>cat *.fasta escu_consensus.fasta
 
 vsearch --cluster_fast consensus_escu.fasta --threads 10 --iddef 2 --id 0.92 --consout cons_escu92.fasta --msaout msa_escu92.fasta</code></pre>
-<p>###Step 3: Cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”. Then remove paralogs</p>
-<p>####a. <em>P. aquilinum</em> - cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”</p>
+</div>
+</div>
+<div id="step-3-cluster-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference.-then-remove-paralogs" class="section level3">
+<h3>Step 3: Cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”. Then remove paralogs</h3>
+<div id="a.-p.-aquilinum---cluster-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference" class="section level4">
+<h4>a. <em>P. aquilinum</em> - cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”</h4>
 <pre class="bash"><code>vsearch --cluster_fast 92aquiCons.fasta --threads 10 --iddef 2 --id 0.84 --consout 84aquiCons.fasta --msaout 84aquiMsa.fasta</code></pre>
-<p>####b. <em>P. esculentum</em> - cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”</p>
+</div>
+<div id="b.-p.-esculentum---cluster-at-84-similarity-using-the-file-clustered-at-92-similarity-as-the-reference" class="section level4">
+<h4>b. <em>P. esculentum</em> - cluster at 84% similarity, using the file clustered at 92% similarity as the “reference”</h4>
 <pre class="bash"><code>vsearch --cluster_fast 92escuCons.fasta --threads 10 --iddef 2 --id 0.84 --consout 84escuCons.fasta --msaout 84escuMsa.fasta</code></pre>
-<p>####c. Remove collapsed clusters (paralogs) from files clustered at 84% similarity</p>
+</div>
+<div id="c.-remove-collapsed-clusters-paralogs-from-files-clustered-at-84-similarity" class="section level4">
+<h4>c. Remove collapsed clusters (paralogs) from files clustered at 84% similarity</h4>
 <p>The remove_collapsed_clusters.py script removes all entries that have (the 2nd) seqs &gt; 1.</p>
 <pre class="bash"><code>./remove_collapsed_clusters.py 84aquiCons.fasta RCCaqui.fasta
 sta
@@ -433,8 +467,13 @@ sta
 
 444932 uncollapsed clusters found</code></pre>
 <p>The resulting RCC*.fasta files will be used in step 5</p>
-<p>###Step 4: combine aqui and escu, re-run vsearch clustering and filter</p>
-<p>####a. BEFORE COMBINING Make sure your <em>aquilinum</em> and <em>esculentum</em> inds are marked separatley within the RCC*.fasta files. This will make checking to see if each final contig is represented by each species much easier.</p>
+</div>
+</div>
+<div id="step-4-combine-aqui-and-escu-re-run-vsearch-clustering-and-filter" class="section level3">
+<h3>Step 4: combine aqui and escu, re-run vsearch clustering and filter</h3>
+<div id="a.-before-combining" class="section level4">
+<h4>a. BEFORE COMBINING</h4>
+<p>Make sure your <em>aquilinum</em> and <em>esculentum</em> inds are marked separatley within the RCC*.fasta files. This will make checking to see if each final contig is represented by each species much easier.</p>
 <pre class="bash"><code>sed 's/^&gt;centroid=centroid=/&gt;centroid=centroid=a/g' RCCaqui.fasta &gt; aRCCaqui.fasta
 
 sed 's/^&gt;centroid=centroid=/&gt;centroid=centroid=e/g' RCCescu.fasta &gt; eRCCescu.fasta</code></pre>
@@ -458,19 +497,33 @@ vsearch --cluster_fast ae_cons.fasta --threads 10 --iddef 2 --id 0.84 --consout 
 finished, retained 105428 contigs</code></pre>
 <p>We chose to use the 84% similarity. The proided us with a large number of contigs present in both species. We are going to apply some much stricter filtering parameters later on in the variant calling step, so it is better to start off with a few more contigs / material in general.</p>
 <p>Hooray! Now you have a fresh <em>de novo</em> reference with which to align your parsed .FASTQ files!</p>
-<p>###<strong>3) Alignment of parsed reads and variant calling</strong></p>
-<p>###Step 1: Prepare the reference sequence</p>
-<p>####a. Index the reference (consensus) sequence.</p>
+</div>
+</div>
+</div>
+<div id="alignment-of-parsed-reads" class="section level2">
+<h2>Alignment of parsed reads</h2>
+<div id="step-1-prepare-the-reference-sequence" class="section level3">
+<h3>Step 1: Prepare the reference sequence</h3>
+<div id="a.-index-the-reference-consensus-sequence." class="section level4">
+<h4>a. Index the reference (consensus) sequence.</h4>
 <p>Here, we used the Burrow-Wheeler Aligner (BWA v. 0.7.10) to index our reference genome. This give the squence position points for the alignment later on.</p>
 <pre class="bash"><code>bwa index ae_consensus_final.fasta </code></pre>
-<p>####b. Picard tools to create a dictionary</p>
+</div>
+<div id="b.-picard-tools-to-create-a-dictionary" class="section level4">
+<h4>b. Picard tools to create a dictionary</h4>
 <p>We used Java (OpenJDK) v. 1.8.0 and PicardTools v. 2.9.0</p>
 <pre class="bash"><code>java -jar picard.jar CreateSequenceDictionary REFERENCE=ae_consensus_final.fasta OUTPUT=ae_consensus_final.dict</code></pre>
-<p>####c. Creating the fasta index file</p>
+</div>
+<div id="c.-creating-the-fasta-index-file" class="section level4">
+<h4>c. Creating the fasta index file</h4>
 <p>We used SAMTOOLS v. 1.5</p>
 <pre class="bash"><code>samtools faidx ae_consensus_final.fasta</code></pre>
-<p>###Step 2: Align parsed reads (from ALL individual .FASTQ files) to the <em>de novo</em> reference</p>
-<p>####a. Align individuals with BWA ALN</p>
+</div>
+</div>
+<div id="step-2-align-parsed-reads-from-all-individual-.fastq-files-to-the-de-novo-reference" class="section level3">
+<h3>Step 2: Align parsed reads (from ALL individual .FASTQ files) to the <em>de novo</em> reference</h3>
+<div id="a.-align-individuals-with-bwa-aln" class="section level4">
+<h4>a. Align individuals with BWA ALN</h4>
 <p>See script <code>bwa_aln.sh</code></p>
 <pre class="bash"><code>#! /bin/bash
 
@@ -487,44 +540,66 @@ echo $ids
 
 done</code></pre>
 <p>The output is .SAM files for each individual</p>
-<p>####b. Convert files from .SAM to .BAM, sort, and index the individuals using SAMTOOLS</p>
+</div>
+<div id="b.-convert-files-from-.sam-to-.bam-sort-and-index-the-individuals-using-samtools" class="section level4">
+<h4>b. Convert files from .SAM to .BAM, sort, and index the individuals using SAMTOOLS</h4>
 <pre class="bash"><code>samtools view -o *.bam *.sam
 
 samtools sort -o *.sorted.bam *.bam
  
 samtools index -b *.sorted.bam</code></pre>
 <p>Because there were about 100 individuals, we used a fork manager to run this through the University of Utah Center for High Performance Computing cluster (CHPC). The result is a .bam, .sorted.bam, and .sorted.bam.bai file for each individual. See the script fork_view_sort_index.pl for an example.</p>
-<p>###Step 3: Call Variants</p>
+</div>
+</div>
+</div>
+<div id="variants-calling" class="section level2">
+<h2>Variants Calling</h2>
 <p>To call variants, we used the GATK HaplotypeCaller (v. 3.8.0) because of its ability to specify ploidy. We called variants separately for the diploids and tetraploids.</p>
-<p>####Diploids</p>
+<div id="diploids" class="section level4">
+<h4>Diploids</h4>
 <pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I diploid_bams.list --genotyping_mode DISCOVERY -ploidy 2 -o 2ae_rawVar.vcf -out_mode EMIT_VARIANTS_ONLY</code></pre>
-<p>####Tetraploids</p>
+</div>
+<div id="tetraploids" class="section level4">
+<h4>Tetraploids</h4>
 <pre class="bash"><code>java -Xmx48g -jar GenomeAnaysisTK.jar -T HaplotypeCaller -R ae_consensus_final -I tetraploid_bams.list --genotyping_mode DISCOVERY -ploidy 4 -o 4ae_rawVar.g.vcf -out_mode EMIT_VARIANTS_ONLY --variant_index_type LINEAR --variant_index_parameter 128000</code></pre>
 <pre class="bash"><code>grep -v ^# ae.vcf | cut -f 8 | perl -p -i -e 's/DP=(\d+);\S+/\1/' &gt; depth.txt</code></pre>
-<p>###Step 4: filter VCFs</p>
+</div>
+<div id="step-1-filter-vcfs" class="section level3">
+<h3>Step 1: filter VCFs</h3>
 <p>VCFTOOLS (v. 0.1.15) can be used to filter diploids (see below), but because it does not support tetraploids we created a custom Python script to filter instead.</p>
 <pre class="bash"><code>vcftools --remove-filtered-all --remove-indels --maf 0.1 --max-maf 0.99 --min-meanDP 2.0 --max-missing 0.3 --minQ 20 --recode-INFO-all --recode --vcf 2ae\_rawVar.vcf</code></pre>
 <p>The script vcfFilter.py filters based on read depth (minCoverage), alternative alleles(minAltRds), fixed loci (notFixed), and mapping quality (mapQual). These variables can be altered within the file to achieve the desired filtering affect (see <strong>stringency variable</strong> in script below).</p>
 <p>BOTH VCF files need to be filtered this way (2ae_rawVar.vcf and 4ae_rawVar.vcf).</p>
-<p>###Step 5: Find the intersection of variants in diploids and tetraploids</p>
+</div>
+<div id="step-2-find-the-intersection-of-variants-in-diploids-and-tetraploids" class="section level3">
+<h3>Step 2: Find the intersection of variants in diploids and tetraploids</h3>
 <p>Since we now have two VCF files, we need to combine them again somehow. To do this, we find the <strong>intersection</strong> of the variants in both files, subset, and then re-combine.</p>
-<p>####a. Intersection of variants</p>
+<div id="a.-intersection-of-variants" class="section level4">
+<h4>a. Intersection of variants</h4>
 <pre class="bash"><code>perl vcf_checker.pl filtered_ae2.vcf filtered_4ae.vcf</code></pre>
 <p>Output is a list of the contigs present in both VCF files called matches.txt</p>
-<p>####b. Subset VCF files with list of intersection matches</p>
+</div>
+<div id="b.-subset-vcf-files-with-list-of-intersection-matches" class="section level4">
+<h4>b. Subset VCF files with list of intersection matches</h4>
 <p>Do this for both files.</p>
 <pre class="bash"><code>perl subsetVcf.pl matches.vcf filtered_ae2.vcf
 
 perl subsetVcf.pl matches.vcf filtered_ae4.vcf</code></pre>
 <p>Output is two files: sub_filtered_ae2.vcf and sub_filtered_ae4.vcf</p>
-<p>####c. Combine files</p>
+</div>
+<div id="c.-combine-files" class="section level4">
+<h4>c. Combine files</h4>
 <p>What we are doing here is appending the data from one file onto the end of each matching contig in the other file.</p>
 <pre class="bash"><code>perl combine.pl sub\_filtered\_ae2.vcf sub\_filtered\_4ae.vcf</code></pre>
 <p>This outputs a file called aeAll.vcf</p>
-<p><strong>Add CHROM lines from each to aeAll.vcf</strong></p>
 <p>Our original sample size was 101 plus 15 replicates. Three of the samples were an outgroup, which we decided not to use in the admixture analysis. A fourth sample did not qork in sequencing; its initial FASTQ file was empty. After calling variants, we checked our replicates against their associated indiviual, and determined that all replicates had amplified properly and made it through the pipeline to match their original ID. We then combinded replicates to their associated individual and re-did the variant calling.</p>
-<p>##Estimation of Admixture</p>
-<p>###<strong>Entropy</strong></p>
+</div>
+</div>
+</div>
+<div id="estimation-of-admixture" class="section level2">
+<h2>Estimation of Admixture</h2>
+<div id="entropy" class="section level3">
+<h3><strong>Entropy</strong></h3>
 <p>Before getting started with Entropy, we need to convert our VCF file to a GL (Genotype Likelihood) file.</p>
 <p>We used the perl script vcf2gl.pl to convert our filtered vcf to the simpler .gl format for downstream analysis.</p>
 <p>For diploids:</p>
@@ -533,9 +608,12 @@ perl subsetVcf.pl matches.vcf filtered_ae4.vcf</code></pre>
 <p>Next we are going to convert the GL file to a matrix that we can use in R with DAPC.</p>
 <pre class="bash"><code>perl gl2genest.pl out.recode.gl</code></pre>
 <p>This outputs a file called pntest_out.recode.gl</p>
-<p>###Discriminant Analysis of Principle Components</p>
+</div>
+<div id="discriminant-analysis-of-principle-components" class="section level3">
+<h3>Discriminant Analysis of Principle Components</h3>
 <p>Among the diploid species, <em>Pteridium aquilinum</em> and <em>P. esculentum</em>, and the tetraploid species, <em>P. semihaustatum</em> and <em>P. caudatum</em>, there are 15 sub-species. These distinctions are based mostly on morphology, and so testing the population structure among them will help distinguish the validity of these biological species and sub-species.</p>
-<p>#####a. seed entropy with values from DAPC</p>
+<div id="a.-seed-entropy-with-values-from-dapc" class="section level5">
+<h5>a. seed entropy with values from DAPC</h5>
 <p>Using the R package ADEGENET (v. 2.1.1), run a Discriminate Analysis of Principle Componets (DAPC function) to seed values in ENTROPY so we don’t get label swapping. We followed the <a href="adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf">DAPC vignette</a>.</p>
 <pre class="r"><code>library(adegenet)
 
@@ -561,11 +639,18 @@ dapc1 &lt;- dapc(dg, grp$grp)
 # discriminant dunctions: 1
 
 write.table(dapc1$posterior, &quot;k_est.txt&quot;)</code></pre>
-<p>#####b. run ENTROPY</p>
+</div>
+<div id="b.-run-entropy" class="section level5">
+<h5>b. run ENTROPY</h5>
 <pre class="bash"><code>./entropy -b 2000 -t 4 -k 2 -i ae_in.gl -o out.hdf5 -m 1 -w 0 -q pop_ests.txt -s 20</code></pre>
-<p>#####c. ESTPOST - pulling out meaningful things from entropy</p>
+</div>
+<div id="c.-estpost---pulling-out-meaningful-things-from-entropy" class="section level5">
+<h5>c. ESTPOST - pulling out meaningful things from entropy</h5>
 <pre class="bash"><code>/home/skinosian/hts_tools/estpost_h5_entropy -o out_d -p deviance -s 3 -w 1 entropy_ae_k2_2.hdf5</code></pre>
-<p>###<strong>Visualizing Admixture</strong></p>
+</div>
+</div>
+<div id="visualizing-admixture" class="section level3">
+<h3><strong>Visualizing Admixture</strong></h3>
 <pre class="r"><code># read in files from estpost
 k2_1 &lt;- read.csv(&quot;k2_1.txt&quot;, sep = ',', header = F)
 k2_2 &lt;- read.csv(&quot;k2_2.txt&quot;, sep = ',', header = F)
@@ -614,7 +699,10 @@ plot_q_per_chain &lt;- function(kqlist, xlabel, ...){
 }
 
 plot_q_per_chain(k2list, df2[,3], 2)</code></pre>
-<p>##Program Versions</p>
+</div>
+</div>
+<div id="program-versions" class="section level2">
+<h2>Program Versions</h2>
 <p>Below is a list of all program versions used in this analysis. Please note that newer versions of these software packages <em>may</em> work for this pipeline, but be aware that usage often changes with new verions.</p>
 <p><a href="https://www.perl.org/">Perl 5</a></p>
 <p><a href="https://www.python.org/downloads/release/python-2713/">Python 2.7.13</a></p>
@@ -625,6 +713,7 @@ plot_q_per_chain(k2list, df2[,3], 2)</code></pre>
 <p><a href="https://github.com/broadinstitute/picard/releases">PicardTools 2.9.0</a></p>
 <p><a href="https://software.broadinstitute.org/gatk/download/archive">GATK v.3.8.0</a> - <a href="https://software.broadinstitute.org/gatk/documentation/tooldocs/3.8-0/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php">HaplotypeCaller</a></p>
 <p><a href="https://github.com/sylviakinosian/Pteridium_GBS_Pipeline/tree/master/entropy">ENTROPY &amp; ESTPOST</a></p>
+</div>
 </div>
 
 
