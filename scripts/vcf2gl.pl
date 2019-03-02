@@ -38,6 +38,7 @@ while (<IN>){
 		print OUT "$word\n";
 	}
 	## read genetic data lines, write gl
+	## the regular expression below should match your individual IDs
 	elsif (m/^contig_(\d+)\s+(\d+)/){# modify this regular expression as needed
 			$word = "$1".":"."$2";
 			if (m/AC=(\d+)/){
@@ -49,6 +50,7 @@ while (<IN>){
 				@line = split(m/\s+/, $_);
 				$i = 0;
 				foreach $word (@line){
+					# these next two regular expressions grab the parts of the VCF you need.. they sometimes need to be modified
 					if ($word =~ s/^\d\/\d\://){
 						$word =~ s/\d+,\d+:\d+:\d+:// or die "failed sub $word \n";
 						$word =~ s/,/ /g;
