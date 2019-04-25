@@ -430,6 +430,7 @@ df2 <- make_df(kfile = avg2, kval = 2, names = names[,3])
 df3 <- make_df(kfile = avg3, kval = 3, names = names[,3])
 df4 <- make_df(kfile = avg4, kval = 4, names = names[,3])
 df5 <- make_df(kfile = avg5, kval = 5, names = names[,3])
+k5List <- list(df5[,1:5])
 
 allkList <- list(df2[,1:2], df3[,1:3], df4[,1:4], df5[,1:5])
 
@@ -461,9 +462,6 @@ plot_q_per_chain <- function(kqlist, ...){
 
 plot_q_per_chain(allkList)
 
-for (i in 1:length(d[,1])){
-	lines(x = d[i,3:4] , y = rep(-0.07, 2), lwd = 2, col = "black", xpd = NA)
-}
 
 # locations of each column
 b <- as.data.frame(matrix(ncol = 1, nrow = 97))
@@ -474,6 +472,28 @@ tapply(X=b[,1],INDEX=names[,3],min)
 tapply(X=b[,1],INDEX=names[,3],max)
 
 d <- names & location values
+
+# for k=5 only
+plot_q_per_chain <- function(kqlist, ...){
+	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
+	par(mfrow = c(length(kqlist),1), mar = c(1,3,3,1) + 0.1, oma = c(15,0,0,0), mgp = c(1,1,0))
+	chain <- seq(1, length(kqlist), 1) 
+	for(i in 1:length(kqlist)){
+		barplot(t(kqlist[[i]]), beside= F, col= cols, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', main = "k = 5", cex.lab = 1.2, cex.main = 1.6)
+		# y axis
+		axis(2, at = c(0, 0.25, 0.5, 0.75, 1), cex.axis = 1, las = 2, pos = -0.2)
+ 	}
+	# x axis, rotating labels
+	text(cex = 1.7, x = (d[,2]-4), y = -0.4, labels = d[,1], xpd=NA, srt=50, font=3)
+}
+
+plot_q_per_chain(k5List)
+
+for (i in 1:length(d[,1])){
+	lines(x = d[i,3:4] , y = rep(-0.05, 2), lwd = 2.5, col = "black", xpd = NA)
+}
+
+
 ```
 
 Principal Components Analysis
