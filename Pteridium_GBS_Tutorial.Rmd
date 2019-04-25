@@ -384,7 +384,9 @@ k2_3 <- read.csv("k2_3.txt", sep = ',', header = F)
 k3_1 <- read.csv("k3_1.txt", sep = ',', header = F)
 k3_2 <- read.csv("k3_2.txt", sep = ',', header = F)
 k3_3 <- read.csv("k3_3.txt", sep = ',', header = F)
-names <- read.csv("names.txt", sep ',', header = F)
+k4_1 <- read.csv("k4_1.txt", sep = ',', header = F)
+k5_1 <- read.csv("k5_2.txt", sep = ',', header = F)
+names <- read.csv("final_inds.csv", header = F)
 
 # this function averages 3 chains for a given k
 avg_k <- function(kval, ninds = 97, chain1, chain2, chain3){
@@ -399,7 +401,8 @@ avg_k <- function(kval, ninds = 97, chain1, chain2, chain3){
 
 avg2 <- avg_k(kval = 2, chain1 = k2_1, chain2 = k2_2, chain3 = k2_3)
 avg3 <- avg_k(kval = 3, chain1 = k3_1, chain2 = k3_1, chain3= k3_3)
-ak5 <- avgk(kval=5, chain1=k5, chain2=k5, chain3=k5)
+avg4 <- avg_k(kval = 4, chain1 = k4_1, chain2 = k4_1, chain3= k4_1)
+avg5 <- avg_k(kval = 5, chain1 = k5_1, chain2 = k5_1, chain3= k5_1)
 
 # add lower bounds of error
 #ak5[,5] <- k5[,3]
@@ -424,12 +427,11 @@ make_df <- function(kfile, kval, ninds = 97, names){
 }
 
 df2 <- make_df(kfile = avg2, kval = 2, names = names[,3])
-k2list <- list(df2[,1:2])
-
 df3 <- make_df(kfile = avg3, kval = 3, names = names[,3])
-k3list <- list(df3[,1:3])
+df4 <- make_df(kfile = avg4, kval = 4, names = names[,3])
+df5 <- make_df(kfile = avg5, kval = 5, names = names[,3])
 
-allkList <- list(df2[,1:2], df3[,1:3])
+allkList <- list(df2[,1:2], df3[,1:3], df4[,1:4], df5[,1:5])
 
 # original function to plot each chain for a given k
 #plot_q_per_chain <- function(kqlist, xlabel, ...){
@@ -446,15 +448,21 @@ allkList <- list(df2[,1:2], df3[,1:3])
 # testing this function
 plot_q_per_chain <- function(kqlist, ...){
 	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
-	par(mfrow = c(length(kqlist),1), mar = c(1,3,3,1) + 0.1, oma = c(8,0,0,0), mgp = c(1,1,0))
+	par(mfrow = c(length(kqlist),1), mar = c(1,3,3,1) + 0.1, oma = c(15,0,0,0), mgp = c(1,1,0))
 	chain <- seq(1, length(kqlist), 1) 
 	for(i in 1:length(kqlist)){
-		barplot(t(kqlist[[i]]), beside= F, col= cols, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', ylab = "Genomic composistion" , main = paste("k =", chain[i]+1, sep = ' '), cex.lab = 1, cex.main = 1.5)
+		barplot(t(kqlist[[i]]), beside= F, col= cols, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', main = paste("k =", chain[i]+1, sep = ' '), cex.lab = 1.2, cex.main = 1.6)
 		# y axis
 		axis(2, at = c(0, 0.25, 0.5, 0.75, 1), cex.axis = 1, las = 2, pos = -0.2)
  	}
 	# x axis, rotating labels
-	text(cex = 1, x = (d[,2]-2), y = -0.45, labels = d[,1], xpd=NA, srt=50)
+	text(cex = 1.7, x = (d[,2]-4), y = -0.9, labels = d[,1], xpd=NA, srt=50, font=3)
+}
+
+plot_q_per_chain(allkList)
+
+for (i in 1:length(d[,1])){
+	lines(x = d[i,3:4] , y = rep(-0.07, 2), lwd = 2, col = "black", xpd = NA)
 }
 
 # locations of each column
@@ -466,86 +474,6 @@ tapply(X=b[,1],INDEX=names[,3],min)
 tapply(X=b[,1],INDEX=names[,3],max)
 
 d <- names & location values
-  
-for (i in 1:length(d[,1])){
-	lines(x = d[i,3:4] , y = rep(-0.06, 2), lwd = 2, col = "black", xpd = NA)
-}
-
-
-
-# plot text outside of barplot area
-# xpd of par function if lines are being weird
-
-#x <- barplot(table(mtcars$cyl), xaxt="n")
-#labs <- paste(names(table(mtcars$cyl)), "cylinders")
-#text(cex=1, x=x-.25, y=-1.25, labs, xpd=TRUE, srt=45)
-
-plot_q_per_chain(k2list, df2[,3], 2)
-
-
-#############################
-# Jenessa's ggplot2 code
-#############################
-library("readr")
-library("ggplot2")
-library("stringr")
-
-# how to make the index numbers not weird??
-transform_df <- function(...){
-	data <- data.frame(rep(k5_df$V6, each=5), rep(k5_df$V7, each=5))
-	j <- 1
-	for (i in 1:97){
-		ggk5[(j:(j+4)),3] <- d[,i]
-		j <- j+5
-	}
-	colnames(ggk5)[1:3] <- c("name", "sample", "point")
-	return(ggk5) 
-}
-
-qordf <- data.frame(
-  sample = k2_df[,3],
-  point = k2[1:97,2],
-  upper = k2[1:97,5],
-  lower = k2[1:97,4],
-  x = seq(0.5,96.5,1),
-  y = as.vector(rep(0, 97)),
-  xend = seq(0.5,96.5,1),
-  yend = as.vector(rep(100, 97))
-)
-
-qordf <- qordf[order(qordf[,1]),]
-qordf[,9] <- seq(1,97,1)
-
-## Plot the dataframe, and add errorbars and points.
-p <- ggplot(qordf, aes(qordf[,9], point))
-p + 
-  geom_col(aes(qordf[,9], point), fill = "#458B74") +
-  theme(panel.background = element_rect(fill = "#FF7F50")) +
-  #scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0)) +
-  ggtitle("Genome Composition") + theme(plot.title = element_text(hjust = 0.5)) +
-  labs(y= "% Genome Composition", x= "") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.title = element_text(size = 14)) +
-  geom_vline(xintercept = seq(0.5,96.5,1), aes(size = 0.03), colour = "white") +
-  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
-  geom_pointrange(aes(ymin = lower, ymax = upper), size = .13) +
-  theme(panel.border = element_rect(colour = "white", fill=NA, size=0.2)) 
-
-## k = 5
-p <- ggplot(ggk5, aes(sample, point))
-p + 
-  geom_col(aes(sample, point), fill = c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF')) +
-  theme(panel.background = element_rect(fill = c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF'))) +
-  #scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0)) +
-  ggtitle("Genome Composition") + theme(plot.title = element_text(hjust = 0.5)) +
-  labs(y= "% Genome Composition", x= "") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.title = element_text(size = 14)) +
-  geom_vline(xintercept = seq(0.5,96.5,1), aes(size = 0.03), colour = "white") +
-  #geom_errorbar(aes(ymin = lower, ymax = upper)) + 
-  #geom_pointrange(aes(ymin = lower, ymax = upper), size = .13) +
-  theme(panel.border = element_rect(colour = "white", fill=NA, size=0.2))
-
 ```
 
 Principal Components Analysis
