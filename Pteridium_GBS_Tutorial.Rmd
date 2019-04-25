@@ -4,7 +4,7 @@ author: "Sylvia Kinosian"
 output: html_document
 ---
 
-This pipeline was designed by Zach Gompert and edited by Martin Schilling and Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
+This pipeline was designed by Zach Gompert and edited by Sylvia Kinosian. All of the associated files can be found at: https://github.com/sylviakinosian/Pteridium_GBS_Pipeline 
 
 The following protocol was designed to process .FASTQ files from ddRADseq data for 4 species of the fern genus *Pteridium*: *P. aquilinum* (diploid), *P. esculentum* (diploid), *P. semihaustatum* (tetraploid), and *P. caudatum* (tetraploid). There is no reference genome for *Pteridium*, so we create a reference *de novo* using the diploid species only. When calling variants, we chose to use the GATK HaplotypeCaller because it allows the user to specify ploidy. We clustered the diploids and tetraploids separately (each run specifying ), then recombined the resulting SNPs (additive, not averaged).
 
@@ -377,75 +377,104 @@ write.table(dapc1$posterior, "k_est.txt")
 
 ```{r eval=FALSE}
 # read in files from estpost
-k2_1 <- read.csv("k2_1.txt", sep = ',', header = F)
+k2_1 <- read.csv("k2_1.txt", sep = ',', header = T)
+k2_1 <- k2_1[,-1]
 k2_2 <- read.csv("k2_2.txt", sep = ',', header = F)
 k2_3 <- read.csv("k2_3.txt", sep = ',', header = F)
-
+k3_1 <- read.csv("k3_1.txt", sep = ',', header = F)
+k3_2 <- read.csv("k3_2.txt", sep = ',', header = F)
+k3_3 <- read.csv("k3_3.txt", sep = ',', header = F)
 names <- read.csv("names.txt", sep ',', header = F)
 
 # this function averages 3 chains for a given k
-avg_k <- function(kval, n_inds = 97, chain1, chain2, chain3){
-	df <- as.data.frame(matrix(nrow = kval*n_inds,  ncol = 4))
+avg_k <- function(kval, ninds = 97, chain1, chain2, chain3){
+	df <- as.data.frame(matrix(nrow = kval*ninds,  ncol = 4))
 	colnames(df)[1:4] <- c("chain1", "chain2", "chain3", "avg")
 	df[,1] <- chain1[,1]	
 	df[,2] <- chain2[,1]
 	df[,3] <- chain3[,1]
-	df[,4] <- rowMeans(df[sapply(df, is.numeric)])
+	df[,4] <- round(rowMeans(df[sapply(df, is.numeric)]), digits = 6)
 	return(df)
 }
 
 avg2 <- avg_k(kval = 2, chain1 = k2_1, chain2 = k2_2, chain3 = k2_3)
+avg3 <- avg_k(kval = 3, chain1 = k3_1, chain2 = k3_1, chain3= k3_3)
 ak5 <- avgk(kval=5, chain1=k5, chain2=k5, chain3=k5)
 
 # add lower bounds of error
-ak5[,5] <- k5[,3]
+#ak5[,5] <- k5[,3]
 
 # add upper bounds of error
-ak5[,6] <- k5[,4]
+#ak5[,6] <- k5[,4]
 
 # column names
-colnames(ak5)[5:6] <- c("LB", "UB")
+#colnames(ak5)[5:6] <- c("LB", "UB")
 
 # makes a data frame with your averaged chains
-make_df <- function(k_file, k_val, n_inds = 97,  names){
+make_df <- function(kfile, kval, ninds = 97, names){
 	x <- 1
-	df <- as.data.frame(matrix(nrow = n_inds, ncol = (k_val)))
-	for (i in 1:(k_val)){
-		df[,i] <- k_file[x:(n_inds*i),4]
-		x <- x+n_inds
+	df <- as.data.frame(matrix(nrow = ninds, ncol = kval+x))
+	for (i in 1:(kval)){
+		df[,i] <- kfile[x:(ninds*i),4]
+		x <- x+ninds
 	}
 	df[,ncol(df)] <- names
 	df <- df[order(df[,ncol(df)]),]
 	return(df)
 }
 
-df2 <- make_df(kfile = avg2, k_val = 2, names = names)
-k2list <- list(k2_ordered[,1:2])
+df2 <- make_df(kfile = avg2, kval = 2, names = names[,3])
+k2list <- list(df2[,1:2])
 
-# function to plot each chain for a given k
-plot_q_per_chain <- function(kqlist, xlabel, ...){
-	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
-	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
-	chain <- seq(1, length(kqlist), 1) 
-	for(i in 1:length(kqlist)){
-		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1.2, border= 1.5, space= c(0.05,0.05), yaxt= 'n', ylab= paste("k =", chain[i]+1, sep= ' '), cex.lab= 2, names.arg= xlabel)
-		axis(2, at= c(0, 0.25, 0.5, 0.75, 1), cex.axis= 1, las= 2, pos= -0.2)
-		arrows(eb2[,1], eb2[,2], angle = 90, code = 3)
- 	}
-}
+df3 <- make_df(kfile = avg3, kval = 3, names = names[,3])
+k3list <- list(df3[,1:3])
 
+allkList <- list(df2[,1:2], df3[,1:3])
+
+# original function to plot each chain for a given k
 #plot_q_per_chain <- function(kqlist, xlabel, ...){
 #	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
-#	par(mfrow = c(length(kqlist),1), mar = c(4,2,1,1) + 0.1, oma = c(5,0,0,0), mgp = c(0,1,0))
+#	par(mfrow= c(length(kqlist),1), mar=c(4,2,1,1) + 0.1, oma= c(5,0,0,0), mgp= c(0,1,0))
 #	chain <- seq(1, length(kqlist), 1) 
 #	for(i in 1:length(kqlist)){
-#		barplot(t(kqlist[[i]]), beside= F, col= cols, cex.name= 1, cex.axis= 1.2, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', ylab = paste("k =", chain[i+1], sep = ' '), cex.lab = 2)
-#		# y axis
-#		axis(2, at = c(0, 0.25, 0.5, 0.75, 1), cex.axis = 1, las = 2, pos = -0.2)
-#		# x axis, rotating labels
-#		text(cex = 1, x = x - .25, y = -1.25, xlabel, xpd=TRUE, srt=45)
-# 	}
+#		barplot(t(kqlist[[i]]), beside= F, col= cols, las= 2, axisnames= T, cex.name= 1, cex.axis= 1.2, border= 1.5, space= c(0.05,0.05), yaxt= 'n', ylab= paste("k =", chain[i]+1, sep= ' '), cex.lab= 2, names.arg= xlabel)
+#		axis(2, at= c(0, 0.25, 0.5, 0.75, 1), cex.axis= 1, las= 2, pos= -0.2)
+#		#arrows(eb2[,1], eb2[,2], angle = 90, code = 3)
+#	}
 #}
+
+# testing this function
+plot_q_per_chain <- function(kqlist, ...){
+	cols <- c('#A8FFFD', '#B862D3','#A39D9D','#FFFF00', '#ff5a5a', '#69C261', '#26CDCD', '#C1C6FF') 	
+	par(mfrow = c(length(kqlist),1), mar = c(1,3,3,1) + 0.1, oma = c(8,0,0,0), mgp = c(1,1,0))
+	chain <- seq(1, length(kqlist), 1) 
+	for(i in 1:length(kqlist)){
+		barplot(t(kqlist[[i]]), beside= F, col= cols, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', ylab = "Genomic composistion" , main = paste("k =", chain[i]+1, sep = ' '), cex.lab = 1, cex.main = 1.5)
+		# y axis
+		axis(2, at = c(0, 0.25, 0.5, 0.75, 1), cex.axis = 1, las = 2, pos = -0.2)
+ 	}
+	# x axis, rotating labels
+	text(cex = 1, x = (d[,2]-2), y = -0.45, labels = d[,1], xpd=NA, srt=50)
+}
+
+# locations of each column
+b <- as.data.frame(matrix(ncol = 1, nrow = 97))
+b[,1] <- barplot(t(k2list[[1]]), beside= F, col= cols, cex.name= 1, cex.axis= 1.2, border = 1, space = 0.05, xaxt = 'n', yaxt = 'n', cex.lab = 1, cex.main = 2)
+
+tapply(X=b[,1],INDEX=names[,3],mean)
+tapply(X=b[,1],INDEX=names[,3],min)
+tapply(X=b[,1],INDEX=names[,3],max)
+
+d <- names & location values
+  
+for (i in 1:length(d[,1])){
+	lines(x = d[i,3:4] , y = rep(-0.06, 2), lwd = 2, col = "black", xpd = NA)
+}
+
+
+
+# plot text outside of barplot area
+# xpd of par function if lines are being weird
 
 #x <- barplot(table(mtcars$cyl), xaxt="n")
 #labs <- paste(names(table(mtcars$cyl)), "cylinders")
@@ -517,6 +546,31 @@ p +
   #geom_pointrange(aes(ymin = lower, ymax = upper), size = .13) +
   theme(panel.border = element_rect(colour = "white", fill=NA, size=0.2))
 
+```
+
+Principal Components Analysis
+
+```{r}
+gk2<-matrix(scan("~/Documents/pteridium/gprob/gpk2.txt", n=2128*97,sep=","), nrow=97,ncol=2128,byrow=T)
+gk3<-matrix(scan("~/Documents/pteridium/gprob/gpk3.txt", n=2128*97,sep=","), nrow=97,ncol=2128,byrow=T)
+gk4<-matrix(scan("~/Documents/pteridium/gprob/gpk4.txt", n=2128*97,sep=","), nrow=97,ncol=2128,byrow=T)
+gk5<-matrix(scan("~/Documents/pteridium/gprob/gpk5.txt", n=2128*97,sep=","), nrow=97,ncol=2128,byrow=T)
+
+# average all four Ks
+g.avg<-(gk2+gk3+gk4+gk5)/4
+
+# check to make sure everything is correct
+#head(g.avg)
+dim(g.avg)
+
+# PCA
+g.pca<-prcomp(g.avg, scale=TRUE)
+
+cols <- c(rep("black", 2), "red", rep("black", 2), rep("red", 2), rep("black", 3), "red", rep("black", 10), rep("red", 2), "black", "red", rep("black",10), "red", rep("black",4), "green", "blue", "black", "green", "red", "blue", "black", "blue", rep("black", 5), rep("red", 3), "black", "green", "red", rep("black", 6), "red", "red", rep("black", 13), "red", "green", rep("black", 4), "green", "red", rep("black", 5), "red", "green", "red", "black")
+
+# plot
+plot(g.pca$x[,1], g.pca$x[,2], col = cols, xlab="PCA1",ylab="PCA2", cex.lab=1.3, cex.axis=1.6, main = "PCA of Pteridium", pch=19)
+legend(49, 30, legend=c("P. aquilinum", "P. esculentum", "P. caudatum", "P. semihaustatum"), col=c("black", "red", "green", "blue"), pch=19, cex=0.9)
 ```
 
 ## Program Versions
