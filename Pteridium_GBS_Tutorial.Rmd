@@ -65,6 +65,12 @@ for i in *.fastq; do
 	done
 ```
 
+SEQTK parameters - convert FASTQ to FASTA:
+
+seqtk seq -a file.tq > file.fa
+
+This purely converts file formats, no changes. See https://github.com/lh3/seqtk for additional options for converting to FASTA format.
+
 #### b.
 The second part is to use the program VSEARCH (v. 2.4.2) to cluster sequences **within each individual** with a 98% similarity to create "centroids". 
 
@@ -79,7 +85,22 @@ VSEARCH command "under the hood" of vsearch.sh:
 vsearch --cluster_fast indivdual.fasta --id 0.98 --iddef 2 --threads 8 --centroids centroids/centroids98_individual.fasta
 ```
 
+Parameters - see VSEARCH documentation (https://github.com/torognes/vsearch, Getting Help section):
+
+--cluster\_fast --> clusterize the fasta sequencing in the given file; automatically sorted by decreasing sequence abundance<br> 
+--id 0.98 --> cluster sequences at 98% similarity; pairwise identify defined as the number of (matching columns)/(alignment length - terminal gaps); can be modified by --iddef <br>
+--iddef 2 --> change the pairwise identity definition used in --id. This is the default value but we chose to include it in case the default changes.
+--threads 8 --> number of computations threads to use<br>
+--centroids --> file name or folder to place clustered sequences in; the centroid is the sequence that seeded the cluster (ie. the first sequence of the cluster)
+
 ### Step 2: combine centroids from preceeding runs and cluster at 92% similarity
+
+--consout *filename* --> Output ONLY cluster consensus sequences to *filename*. For each cluster, a multiple alignment is computed, and a consensus sequence is constructed by taking the majority symbol (nucleotide or gap) from each column of the alignment.<br>
+--msaout *filename* --> Output BOTH a multiple sequence alignment AND a consensus sequence for each cluster to *filename*.
+--cluster\_fast --> clusterize the fasta sequencing in the given file; automatically sorted by decreasing sequence abundance<br> 
+--id 0.92 --> cluster sequences at 92% similarity<br>
+--iddef 2 --> change the pairwise identity definition used in --id. This is the default value but we chose to include it in case the default changes.
+--threads 10 --> number of computations threads to use<br>
 
 #### a. *P. aquilinum*
 ```{bash eval=FALSE}
@@ -372,6 +393,17 @@ write.table(dapc1$posterior, "k_est.txt")
 ```{bash eval=FALSE}
 /home/skinosian/hts_tools/estpost_h5_entropy -o out_d -p deviance -s 3 -w 1 entropy_ae_k2_2.hdf5
 ```
+
+-o outfile<br>
+-p name of parameter to summarize<br>
+-s which summary to perform:<br> 
+0 = posterior estimates and credible intervals<br>
+1 = histogram of posterior samples<br>
+2 = convert to plain text<br>
+3 = calculate DIC<br>
+4 = MCMC diagnostic<br>
+- w write parameter identification to file, boolean<br>
+
 
 ### **Visualizing Admixture**
 
